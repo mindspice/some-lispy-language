@@ -42,7 +42,7 @@ public class LexTest {
     @Test
     public void testKeywordAndIdentityLexing() {
         var lex = new Lexer("""
-                (def x 10)
+                (define x 10)
                 (for-i 0 10 2)
                 (TestFunction1)
                 (testFunction2)
@@ -50,7 +50,7 @@ public class LexTest {
                 """);
         var tokens = lex.start();
 
-        assertEquals(TokenType.DEF, tokens.get(1).type());
+        assertEquals(TokenType.DEFINE, tokens.get(1).type());
         assertEquals(TokenType.IDENTIFIER, tokens.get(2).type());
 
         assertEquals(TokenType.FOR_I, tokens.get(6).type());
@@ -60,5 +60,11 @@ public class LexTest {
 
     }
 
+    @Test
+    public void typeLexing() {
+        var lex = new Lexer("(define x ::int 10)");
+        var tokens = lex.start();
+        tokens.forEach(t -> System.out.println(t.type() + " | " + t.literal()));
+    }
 
 }

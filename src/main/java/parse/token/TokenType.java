@@ -44,10 +44,12 @@ public enum TokenType {
     PLUS_PLUS("++"),
     MINUS_MINUS("--"),
     ASSIGN(":="),
+
+
     // Complex
     IDENTIFIER(null),
     STRING(null),
-    TYPE((null)),
+    TYPE(("::")),
     INT(null),
     LONG(null),
     FLOAT(null),
@@ -60,7 +62,7 @@ public enum TokenType {
     ELSE("else"),
     EQUALS("equals"),
     COND("cond"),
-    DEF("def"),
+    DEFINE("define"),
     NULL("null"),
     PRINT("print"),
     SUPER("super"),
@@ -74,7 +76,7 @@ public enum TokenType {
     CDR("cdr"),
     CDDR("cddr"),
     CDAR("cdar"),
-
+    FUNC("func"),
     // End
     EOF(null);
 

@@ -36,21 +36,22 @@ public class Lexer {
             }
 
             if (lexDualToken(currChar)) { continue; }
-            if (leXSingleToken(currChar)) { continue; }
+            if (lexSingleToken(currChar)) { continue; }
 
             if (isNumeric(currChar)) {
                 lexNumber();
                 continue;
             }
 
-            lexKeywordOrIdentifier();
+            if (lexKeywordOrIdentifier()) { continue; }
 
+            //System.out.println(currChar);
+            throw new IllegalStateException("Invalid formatting encountered on line: " + lineNum);
         }
         return tokens;
     }
 
-
-    private boolean leXSingleToken(char c) {
+    private boolean lexSingleToken(char c) {
         TokenType singleToken = TokenType.matchSingle(c);
         if (singleToken == null) { return false; }
 
@@ -69,12 +70,22 @@ public class Lexer {
             return false;
         }
         TokenType dblToken = TokenType.matchDouble(c1, peekOne());
-        if (dblToken != null) {
-            addToken(dblToken);
-            advance(); // consume 2nd char
-            return true;
+        if (dblToken == null) { return false; }
+        advance(); // consume 2nd char
+
+        switch (dblToken) {
+            case TokenType.TYPE -> lexType();
+            default -> addToken(dblToken);
         }
-        return false;
+        return true;
+    }
+
+    private boolean lexType() {
+        while (!isDefEnd(peekOne()) && haveNext()) {
+            advance();
+        }
+        addToken(TokenType.TYPE, source.substring(startIndex + 2, currIndex));
+        return true;
     }
 
     private void lexString() {
@@ -137,14 +148,16 @@ public class Lexer {
         }
     }
 
-    public void lexKeywordOrIdentifier(){
-        while(isAlphaNumeric(peekOne())) {
+    public boolean lexKeywordOrIdentifier() {
+
+        while (isAlphaNumeric(peekOne())) {
             advance();
         }
 
         String text = source.substring(startIndex, currIndex);
         TokenType kwToken = TokenType.matchKeyWord(text);
         addToken(Objects.requireNonNullElse(kwToken, TokenType.IDENTIFIER), text);
+        return true;
     }
 
     private char advance() {
@@ -172,6 +185,10 @@ public class Lexer {
                 || (c >= 'A' && c <= 'Z')
                 || c == '_'
                 || c == '-'; // - is not valid to start an identifier(will lex as minus), but can occur mid-identifier
+    }
+
+    private boolean isDefEnd(char c) {
+        return c == ' ' || c == '\r' || c == '\n' || c == '\t';
     }
 
     private boolean isAlphaNumeric(char c) {
