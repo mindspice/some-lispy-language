@@ -88,6 +88,8 @@ public class Lexer {
         return true;
     }
 
+    // TODO handled nested strings
+
     private void lexString() {
         char peeked;
         while ((peeked = peekOne()) != '"' && haveNext()) {
@@ -204,11 +206,21 @@ public class Lexer {
         return currIndex != source.length();
     }
 
-    // Validation Helpers
+    //  Helpers
+    private char[] terminalChars = new char[]{' ', ')', '}', ']'};
 
-    Consumer<Character> numTermCheck = (c) -> {
+    private boolean isTerminalChar(char c) {
+        for (char t : terminalChars) {
+            if (c == t) { return true; } ;
+        }
+        return false;
+    }
+
+    private Consumer<Character> numTermCheck = (c) -> {
         if (c != ' ' && c != ')') {
             throw new IllegalStateException("Encountered data directly after numeric literal terminator on line: " + lineNum);
         }
     };
+
+
 }

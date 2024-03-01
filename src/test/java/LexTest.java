@@ -37,6 +37,12 @@ public class LexTest {
         var lex2 = new Lexer("(def x \"String\nLiteral\")");
         var tokens2 = lex2.start();
         assertEquals("String\nLiteral", tokens2.get(3).literal());
+
+//        var lex3 = new Lexer("(def x \"String Literal\"with nested\" string\")");
+//        var tokens3 = lex3.start();
+//        tokens3.forEach(System.out::println);
+//        assertEquals("String Literal\"with nested\" string", tokens3.get(3).literal());
+
     }
 
     @Test
