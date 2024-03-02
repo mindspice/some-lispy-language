@@ -105,7 +105,7 @@ public class Parser {
         }
 
         if (definitionNode instanceof DefinitionNode.FunctionDef && varType != null) { // TODO implement actual warnings
-            System.out.println(String.format("Type specifier %s, is unused. Variable type specification ignored on lambda bound variables.", varType));
+            System.out.printf("Type specifier %s, is unused. Variable type specification ignored on lambda bound variables.%n", varType);
         }
 
         return definitionNode;
@@ -198,8 +198,8 @@ public class Parser {
             case ASSIGN -> { return parseAssign(); }
             case IF -> { return parseIf(); }
             case COND -> { return parseCond(); }
-            case BEGIN -> { return parseBegin(); }
-//            case PRINT -> { }
+            case BEGIN -> { return parseMultiExpr(); }
+            case PRINT -> { return parsePrint(); }
 //            case FOR_I -> { }
 //            case FOR_EACH -> { }
 //            case WHILE -> { }
@@ -212,11 +212,6 @@ public class Parser {
 //            case CDAR -> { }
             default -> throw onError.apply("Unsupported operation: " + peek().lexeme());
         }
-    }
-
-    private Node parseBegin() {
-        consume(TokenType.Expression.BEGIN, "Expected begin symbol");
-        return parseMultiExpr();
     }
 
     private Node parseMultiExpr() {
@@ -236,7 +231,7 @@ public class Parser {
     }
 
     private ExpressionNode parseAssign() {
-        consume(TokenType.Expression.ASSIGN, "Expected assignment symbol");
+
         String identifier = consume(TokenType.Literal.IDENTIFIER, "Expected identifier for assignment").lexeme();
         Node value = parseExpressionData();
         return new ExpressionNode.AssignOp(identifier, value);
@@ -248,6 +243,10 @@ public class Parser {
         ExpressionNode.CondBranch condBranch = new ExpressionNode.CondBranch(condition, thenBranch);
         Node elseBranch = peek().type() != TokenType.Lexical.RIGHT_PAREN ? parseExpressionData() : null;
         return new ExpressionNode.IfExpr(condBranch, elseBranch);
+    }
+
+    private ExpressionNode parsePrint() {
+        return new ExpressionNode.PrintExpr(parseSExpr());
     }
 
     private ExpressionNode.CondBranch parseCondBranch() {

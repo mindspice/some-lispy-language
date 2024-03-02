@@ -12,6 +12,8 @@ public sealed interface ExpressionNode extends Node {
 
     record MultiExpr(List<Node> expressions) implements ExpressionNode { }
 
+    record PrintExpr(Node value) implements ExpressionNode { }
+
     record IfExpr(CondBranch condBranch, Node elseBranch) implements ExpressionNode {
         public boolean hasElse() { return elseBranch != null; }
     }
