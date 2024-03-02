@@ -4,6 +4,7 @@ import parse.token.Token;
 import parse.token.TokenType;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 import java.util.function.Consumer;
@@ -20,6 +21,7 @@ public class Lexer {
     private final TokenType.SingleToken[] SINGLE_TOKENS;
     private final TokenType.DualTokens[] DUAL_TOKENS;
     private final TokenType.KeyWordToken[] KEYWORD_TOKENS;
+    private final TokenType.ModifierToken[] MODIFIER_TOKENS;
 
     public Lexer(String source) {
         this.source = source;
@@ -27,6 +29,7 @@ public class Lexer {
         SINGLE_TOKENS = TokenType.getSingleTokens();
         DUAL_TOKENS = TokenType.getDualTokens();
         KEYWORD_TOKENS = TokenType.getKeyWordTokens();
+        MODIFIER_TOKENS = TokenType.getModifierTokens();
     }
 
     public TokenType matchSingle(char c) {
@@ -50,6 +53,15 @@ public class Lexer {
     public TokenType matchKeyWord(String word) {
         for (var t : KEYWORD_TOKENS) {
             if (t.keyword().equals(word)) {
+                return t.tokenType();
+            }
+        }
+        return null;
+    }
+
+    public TokenType matchModifier(String word) {
+        for (var t : MODIFIER_TOKENS) {
+            if (t.modifierLexeme().equals(word)) {
                 return t.tokenType();
             }
         }
@@ -91,6 +103,7 @@ public class Lexer {
         if (singleToken == null) { return false; }
 
         switch (singleToken) { //TODO add comments
+            case TokenType.Syntactic.AMPERSAND -> lexModifier();
             case TokenType.Lexical.QUOTE -> {
                 lexString();
                 return true;
@@ -120,6 +133,19 @@ public class Lexer {
             advance();
         }
         addToken(TokenType.Syntactic.TYPE, source.substring(startIndex + 2, currIndex));
+        return true;
+    }
+
+    private boolean lexModifier() {
+        while (!isDefEnd(peekOne()) && haveNext()) {
+            advance();
+        }
+        String text = source.substring(startIndex, currIndex);
+        TokenType modToken = matchModifier(text);
+        if (modToken == null) {
+            throw new RuntimeException("Invalid syntax: " + text);
+        }
+        addToken(modToken, text);
         return true;
     }
 
@@ -225,7 +251,7 @@ public class Lexer {
     }
 
     private boolean isDefEnd(char c) {
-        return c == ' ' || c == '\r' || c == '\n' || c == '\t';
+        return c == ' ' || c == '\r' || c == '\n' || c == '\t' || c ==')';
     }
 
     private boolean isAlphaNumeric(char c) {

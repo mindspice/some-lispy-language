@@ -176,13 +176,7 @@ public sealed interface TokenType {
         REST("&rest");
 
         public final String stringValue;
-//        public static final Modifier[] DEFINITION_MODIFIERS = new Modifier[]{
-//                MUTABLE,
-//                MUTABLE_ALL,
-//                FINAL,
-//                FINAL_ALL,
-//
-//        }
+
 
         Modifier(String stringValue) { this.stringValue = stringValue; }
 
@@ -202,6 +196,8 @@ public sealed interface TokenType {
 
     record KeyWordToken(String keyword, TokenType tokenType) { }
 
+    record ModifierToken(String modifierLexeme,TokenType tokenType) {}
+
     private static Stream<TokenType> getAllStream() {
         return Stream.of(
                 Arrays.stream(Lexical.values()),
@@ -209,8 +205,7 @@ public sealed interface TokenType {
                 Arrays.stream(Operation.values()),
                 Arrays.stream(Literal.values()),
                 Arrays.stream(Expression.values()),
-                Arrays.stream(Definition.values()),
-                Arrays.stream(Modifier.values())
+                Arrays.stream(Definition.values())
         ).flatMap(Function.identity());
 
     }
@@ -234,6 +229,12 @@ public sealed interface TokenType {
                 .map(t -> new KeyWordToken(t.asString(), t))
                 .toArray(KeyWordToken[]::new);
 
+    }
+
+    static ModifierToken[] getModifierTokens() {
+        return Arrays.stream(Modifier.values())
+                .map(t -> new ModifierToken(t.asString(), t))
+                .toArray(ModifierToken[]::new);
     }
 
 }
