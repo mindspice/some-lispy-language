@@ -20,70 +20,60 @@ public class Parser {
 
     private Function<String, IllegalStateException> onError = (String msg) -> {
         Token currToken = peek();
-        String error = String.format("[Line: %d] Error: %s", currToken.line(), msg);
+        String error = String.format("[Line: %d, Token: %d] Error: %s", currToken.line(), current, msg);
         return new IllegalStateException(error);
     };
 
-    public Node parse() {
+    public Node start() {
+        List<Node> topLevelExpressions = new ArrayList<>(100);
 
         while (haveNext()) {
+            consumeLParen("Expected start of  expression, found: " + peek().type());
             switch (peek().type()) {
-                case TokenType.Lexical lexical -> { }
-                case TokenType.Definition definition -> { }
-                case TokenType.Expression expression -> { }
-                case TokenType.Literal literal -> { }
-                case TokenType.Operation operation -> { }
-                case TokenType.Syntactic syntactic -> { }
-                case TokenType.Modifier modifier -> { }
-                default -> onError("Unexpected value");
+                case TokenType.Definition definition -> {
+                    switch (definition) {
+                        case DEFINE -> topLevelExpressions.add(parseDefine());
+                        case FUNC -> throw onError.apply("Unsupported top level operation: " + peek().type());
+                        case LAMBDA -> throw onError.apply("Unsupported top level operation: " + peek().type());
+                    }
+                }
+                case TokenType.Expression expression -> topLevelExpressions.add(parseGeneralExpression());
+                case TokenType.Lexical lexical -> throw onError.apply("Unsupported top level operation: " + peek().type());
+                case TokenType.Literal literal -> throw onError.apply("Unsupported top level operation: " + peek().type());
+                case TokenType.Modifier modifier -> throw onError.apply("Unsupported top level operation: " + peek().type());
+                case TokenType.Operation operation -> topLevelExpressions.add(parseOperation((TokenType.Operation) peek().type()));
+                case TokenType.Syntactic syntactic -> throw onError.apply("Unsupported top level operation: " + peek().type());
             }
-        }
 
-    }
-
-    private void parseLexical(TokenType.Lexical lexical) {
-        switch (lexical) {
-            case LEFT_PAREN -> {
-                depth++;
-                advance();
-            }
-            case RIGHT_PAREN -> {
-                depth--;
-                advance();
-            }
-            case LEFT_BRACE -> { }
-            case RIGHT_BRACE -> { }
-            case LEFT_BRACKET -> { }
-            case RIGHT_BRACKET -> { }
-            case COMMA -> { }
-            case SLASH -> { }
-            case BACK_SLASH -> { }
-            case SINGLE_QUOTE -> { }
-            case QUOTE -> { }
-            case EOF -> { }
         }
+        return new Node.program(topLevelExpressions);
     }
 
     private Node parseDefine() {
         consume(TokenType.Definition.DEFINE, "Expected definition, found" + peek().type());
+
         String name = consume(TokenType.Literal.IDENTIFIER, "Definition without name").literal().toString();
-
         List<TokenType.Modifier> modifiers = match(TokenType.Modifier.values()) ? parseModifiers() : null;
-
         String varType = match(TokenType.Syntactic.TYPE) ? advance().literal().toString() : null;
+
+        Node definitionNode = null;
 
         if (peek().type() == TokenType.Lexical.LEFT_PAREN) {
             consumeLParen(""); // Consume opening paren
             if (peekN(2).type() == TokenType.Definition.LAMBDA) {
                 DefinitionNode.LambdaDef lambda = parseLambda();
-                return new DefinitionNode.FunctionDef(name, lambda);
+                definitionNode = new DefinitionNode.FunctionDef(name, lambda);
             } else {
-                return parseExpression();
+                definitionNode = parseGeneralExpression();
             }
         } else if (match(TokenType.Literal.values())) {
-            return new DefinitionNode.VariableDef(name, modifiers, varType, parseLiteral());
+            definitionNode = new DefinitionNode.VariableDef(name, modifiers, varType, parseLiteral());
         }
-        throw (onError.apply("Unexpected syntax after define"));
+        //consumeRParen("Unexpected syntax after define: " + peek().type());
+        if (definitionNode == null) {
+            throw onError.apply("Invalid syntax in define: " + peek().type());
+        }
+        return definitionNode;
     }
 
     private DefinitionNode.LambdaDef parseLambda() {
@@ -94,45 +84,124 @@ public class Parser {
         List<DefinitionNode.ParamDef> parameters = match(TokenType.Lexical.RIGHT_PAREN) ? null : parseParameters();
 
         consumeLParen("Expected body expression, found:" + peek().type());
-        Node body = parseExpression();
+        Node body = parseGeneralExpression();
 
         String returnType = match(TokenType.Syntactic.TYPE) ? advance().literal().toString() : null;
         return new DefinitionNode.LambdaDef(modifiers, parameters, body, returnType);
     }
 
-    private Node parseExpression() {
-        while (peek().type() != TokenType.Lexical.RIGHT_PAREN) {
+    private Node parseGeneralExpression() {
+        Node exprNode = null;
+
+        while (peek().type() != TokenType.Lexical.RIGHT_PAREN && haveNext()) {
             Token token = peek();
-            // Recurse nested expressions, this is needed for java interop and object method/field calls
+            // Recurse nested expressions
             if (token.type() == TokenType.Lexical.LEFT_PAREN) {
                 consumeLParen("");
-                parseExpression();
+                parseGeneralExpression();
             } else {
                 switch (token.type()) {
                     // TODO add case for inline arrays/lists
-                    case TokenType.Expression expression -> { }
-                    case TokenType.Operation operation -> {
-
+                    case TokenType.Expression expression -> {
+                        exprNode = parseExactExpression((TokenType.Expression) token.type());
                     }
-                    case TokenType.Literal literal -> { }
+                    case TokenType.Operation operation -> {
+                        exprNode = parseOperation((TokenType.Operation) token.type());
+                    }
+                    case TokenType.Literal literal -> {
+                        return parseLiteral(); // Directly return literals
+                    }
+                    default -> throw onError.apply("Unsupported operation: " + peek().type());
                 }
             }
         }
+        System.out.println(peek().type());
+        //consumeRParen("Expected closing parentheses");
+        if (exprNode == null) {
+            throw onError.apply("No expression found");
+        }
+        return exprNode;
+    }
+
+    private ExpressionNode parseExactExpression(TokenType.Expression expression) {
+        consume(expression, "Expected expression, found:" + peek().type());
+        switch (expression) {
+            case ASSIGN -> { return parseAssign(); }
+            case IF -> { return parseIf(); }
+            case COND -> { return parseCond(); }
+//            case PRINT -> { }
+//            case FOR_I -> { }
+//            case FOR_EACH -> { }
+//            case WHILE -> { }
+//            case CONS -> { }
+//            case CAR -> { }
+//            case CAAR -> { }
+//            case CADR -> { }
+//            case CDR -> { }
+//            case CDDR -> { }
+//            case CDAR -> { }
+            default -> throw onError.apply("Unsupported operation: " + peek().type());
+        }
+    }
+
+    private ExpressionNode parseAssign() {
+        consume(TokenType.Expression.ASSIGN, "Expected assignment symbol");
+        String identifier = consume(TokenType.Literal.IDENTIFIER, "Expected identifier for assignment").literal().toString();
+        Node value = parseGeneralExpression();
+        return new ExpressionNode.AssignOp(identifier, value);
+    }
+
+    private ExpressionNode parseIf() {
+        consume(TokenType.Expression.ASSIGN, "Expected if symbol");
+        Node condition = parseGeneralExpression();
+        Node thenBranch = parseGeneralExpression();
+        ExpressionNode.CondBranch condBranch = new ExpressionNode.CondBranch(condition, thenBranch);
+        Node elseBranch = peek().type() != TokenType.Lexical.RIGHT_PAREN ? parseGeneralExpression() : null;
+        return new ExpressionNode.IfExpr(condBranch, elseBranch);
+    }
+
+    private ExpressionNode.CondBranch parseCondBranch() {
+        Node condition = parseGeneralExpression();
+        Node thenBranch = parseGeneralExpression();
+        return new ExpressionNode.CondBranch(condition, thenBranch);
+    }
+
+    private ExpressionNode parseCond() {
+        consume(TokenType.Expression.COND, "Expected cond symbol");
+
+        List<ExpressionNode.CondBranch> condBranches = new ArrayList<>(5);
+        Node elseBranch = null;
+
+        while (peek().type() != TokenType.Lexical.RIGHT_PAREN) {
+            if (peekN(2).type() == TokenType.Syntactic.ELSE) {
+                consumeLParen("Expected opening parenthesis for else");
+                consume(TokenType.Syntactic.ELSE, "Expected else symbol");
+                elseBranch = parseGeneralExpression();
+                break;
+            }
+            consumeLParen("Expected enclosing parenthesis for cond branch");
+            condBranches.add(parseCondBranch());
+        }
+        consumeRParen("Expected closing parenthesis");
+        return new ExpressionNode.CondExpr(condBranches, elseBranch);
     }
 
     private OperationNode parseOperation(TokenType.Operation operation) {
         consume(operation, "Expected operation, found:" + peek().type());
+
         List<Node> operands = new ArrayList<>(3);
         while (peek().type() != TokenType.Lexical.RIGHT_PAREN && haveNext()) {
-            operands.add(parseExpression());
+            operands.add(parseGeneralExpression());
         }
-        consumerRParen("Expected closing paren (EOF error?");
+        consumeRParen("Expected closing paren (EOF error?");
+
         if (operands.isEmpty()) {
             throw onError.apply("Operation must have arguments");
         }
         if (operation == TokenType.Operation.NEGATE && operands.size() > 1) {
             throw onError.apply("Unary operation can only have 1 argument");
         }
+
 
         switch (operation) {
             case PLUS, MINUS, ASTERISK, SLASH, CARET, PERCENT, PLUS_PLUS, MINUS_MINUS -> {
@@ -181,12 +250,13 @@ public class Parser {
             params.add(new DefinitionNode.ParamDef(name, type, optional, value));
         }
 
-        consumerRParen("Error parsing parameters");
+        consumeRParen("Error parsing parameters");
         return params;
     }
 
     private LiteralNode parseLiteral() {
         Token token = advance();
+        System.out.println("Literal Token: " + token);
         if (token.type() instanceof TokenType.Literal literal) {
             return switch (literal) {
                 case TRUE -> new LiteralNode.BooleanLit(true);
@@ -246,13 +316,15 @@ public class Parser {
 
     private int consumeLParen(String error) {
         if (peek().type() == TokenType.Lexical.LEFT_PAREN) {
+            if (haveNext()) { current++; }
             return ++depth;
         }
         throw (onError.apply(error));
     }
 
-    private int consumerRParen(String error) {
+    private int consumeRParen(String error) {
         if (peek().type() == TokenType.Lexical.RIGHT_PAREN) {
+            if (haveNext()) { current++; }
             return --depth;
         }
         throw (onError.apply(error));

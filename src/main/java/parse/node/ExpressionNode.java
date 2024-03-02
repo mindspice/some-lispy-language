@@ -15,7 +15,7 @@ public sealed interface ExpressionNode extends Node {
 
     record CondBranch(Node condNode, Node thenNode) implements ExpressionNode { }
 
-    record CondExpr(List<Pair<CondBranch, CondBranch>> condBranches, Node elseBranch) implements ExpressionNode {
+    record CondExpr(List<CondBranch> condBranches, Node elseBranch) implements ExpressionNode {
         public boolean hasElse() { return elseBranch != null; }
     }
 

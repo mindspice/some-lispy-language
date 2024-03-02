@@ -44,7 +44,8 @@ public sealed interface TokenType {
         TILDE("~"),
         SUPER("super"),
         THIS("this"),
-        EQUAL("=");
+        EQUAL("="),
+        ELSE("else");
 
         public final String stringValue;
 
@@ -73,7 +74,6 @@ public sealed interface TokenType {
         LESS_EQUAL("<="),
         PLUS_PLUS("++"),
         MINUS_MINUS("--"),
-
 
         AND("and"),
         OR("or"),
@@ -115,10 +115,10 @@ public sealed interface TokenType {
     enum Expression implements TokenType {
         ASSIGN(":="),
         IF("if"),
-        ELSE("else"),
+
         COND("cond"),
         PRINT("print"),
-        BEGIN("begin"),
+        // BEGIN("begin"),
         FOR_I("for-i"),
         FOR_EACH("for-each"),
         WHILE("while"),
