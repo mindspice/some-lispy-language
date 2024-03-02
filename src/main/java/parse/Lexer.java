@@ -17,9 +17,43 @@ public class Lexer {
     private int currIndex = 0;
     private int lineNum = 1;
 
+    private final TokenType.SingleToken[] SINGLE_TOKENS;
+    private final TokenType.DualTokens[] DUAL_TOKENS;
+    private final TokenType.KeyWordToken[] KEYWORD_TOKENS;
+
     public Lexer(String source) {
         this.source = source;
         this.tokens = new ArrayList<>(source.length() / 5);
+        SINGLE_TOKENS = TokenType.getSingleTokens();
+        DUAL_TOKENS = TokenType.getDualTokens();
+        KEYWORD_TOKENS = TokenType.getKeyWordTokens();
+    }
+
+    public TokenType matchSingle(char c) {
+        for (var t : SINGLE_TOKENS) {
+            if (t.chr() == c) {
+                return t.tokenType();
+            }
+        }
+        return null;
+    }
+
+    public TokenType matchDouble(char c1, char c2) {
+        for (var t : DUAL_TOKENS) {
+            if (t.chr1() == c1 && t.chr2() == c2) {
+                return t.tokenType();
+            }
+        }
+        return null;
+    }
+
+    public TokenType matchKeyWord(String word) {
+        for (var t : KEYWORD_TOKENS) {
+            if (t.keyword().equals(word)) {
+                return t.tokenType();
+            }
+        }
+        return null;
     }
 
     public List<Token> start() {
@@ -48,15 +82,16 @@ public class Lexer {
             //System.out.println(currChar);
             throw new IllegalStateException("Invalid formatting encountered on line: " + lineNum);
         }
+        addToken(TokenType.Lexical.EOF);
         return tokens;
     }
 
     private boolean lexSingleToken(char c) {
-        TokenType singleToken = TokenType.matchSingle(c);
+        TokenType singleToken = matchSingle(c);
         if (singleToken == null) { return false; }
 
         switch (singleToken) { //TODO add comments
-            case TokenType.QUOTE -> {
+            case TokenType.Lexical.QUOTE -> {
                 lexString();
                 return true;
             }
@@ -69,12 +104,12 @@ public class Lexer {
         if (!haveNext() || peekOne() == ' ') {
             return false;
         }
-        TokenType dblToken = TokenType.matchDouble(c1, peekOne());
+        TokenType dblToken = matchDouble(c1, peekOne());
         if (dblToken == null) { return false; }
         advance(); // consume 2nd char
 
         switch (dblToken) {
-            case TokenType.TYPE -> lexType();
+            case TokenType.Syntactic.TYPE -> lexType();
             default -> addToken(dblToken);
         }
         return true;
@@ -84,7 +119,7 @@ public class Lexer {
         while (!isDefEnd(peekOne()) && haveNext()) {
             advance();
         }
-        addToken(TokenType.TYPE, source.substring(startIndex + 2, currIndex));
+        addToken(TokenType.Syntactic.TYPE, source.substring(startIndex + 2, currIndex));
         return true;
     }
 
@@ -104,7 +139,7 @@ public class Lexer {
         advance(); // Consume closing "
 
         String value = source.substring(startIndex + 1, currIndex - 1); // Trim outer " "
-        addToken(TokenType.STRING, value);
+        addToken(TokenType.Literal.STRING, value);
     }
 
     public void lexNumber() {
@@ -133,15 +168,15 @@ public class Lexer {
         }
 
         switch (litType) {
-            case 'd' -> addToken(TokenType.DOUBLE, Double.parseDouble(source.substring(startIndex, currIndex)));
-            case 'f' -> addToken(TokenType.FLOAT, Float.parseFloat(source.substring(startIndex, currIndex)));
-            case 'l' -> addToken(TokenType.LONG, Long.parseLong(source.substring(startIndex, currIndex)));
+            case 'd' -> addToken(TokenType.Literal.DOUBLE, Double.parseDouble(source.substring(startIndex, currIndex)));
+            case 'f' -> addToken(TokenType.Literal.FLOAT, Float.parseFloat(source.substring(startIndex, currIndex)));
+            case 'l' -> addToken(TokenType.Literal.LONG, Long.parseLong(source.substring(startIndex, currIndex)));
             default -> {
                 long value = Long.parseLong(source.substring(startIndex, currIndex));
                 if (value < Integer.MAX_VALUE) {
-                    addToken(TokenType.INT, (int) value);
+                    addToken(TokenType.Literal.INT, (int) value);
                 } else {
-                    addToken(TokenType.LONG, value);
+                    addToken(TokenType.Literal.LONG, value);
                 }
             }
         }
@@ -157,8 +192,8 @@ public class Lexer {
         }
 
         String text = source.substring(startIndex, currIndex);
-        TokenType kwToken = TokenType.matchKeyWord(text);
-        addToken(Objects.requireNonNullElse(kwToken, TokenType.IDENTIFIER), text);
+        TokenType kwToken = matchKeyWord(text);
+        addToken(Objects.requireNonNullElse(kwToken, TokenType.Literal.IDENTIFIER), text);
         return true;
     }
 
@@ -186,7 +221,7 @@ public class Lexer {
         return (c >= 'a' && c <= 'z')
                 || (c >= 'A' && c <= 'Z')
                 || c == '_'
-                || c == '-'; // - is not valid to start an identifier(will lex as minus), but can occur mid-identifier
+                || c == '-'; // - is not valid to start an identifier(will lex as minus), but can occur mid-identifier, change this?
     }
 
     private boolean isDefEnd(char c) {
@@ -211,7 +246,8 @@ public class Lexer {
 
     private boolean isTerminalChar(char c) {
         for (char t : terminalChars) {
-            if (c == t) { return true; } ;
+            if (c == t) { return true; }
+            ;
         }
         return false;
     }
@@ -221,6 +257,5 @@ public class Lexer {
             throw new IllegalStateException("Encountered data directly after numeric literal terminator on line: " + lineNum);
         }
     };
-
 
 }

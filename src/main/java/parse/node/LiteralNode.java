@@ -18,7 +18,8 @@ public sealed interface LiteralNode extends Node {
 
     record BooleanLit(boolean value) implements LiteralNode { }
 
-    record ObjectLit(String type, Object value) implements LiteralNode { }
+    record ObjectLit( Object value) implements LiteralNode { }
 
+    record NullLit() implements LiteralNode { }
 
 }

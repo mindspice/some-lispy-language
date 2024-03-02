@@ -12,19 +12,19 @@ public class LexTest {
     public void testNumberLexing() {
         var lex = new Lexer("(* 2000.00  100 200f 1l 99d) (!= 10");
         var tokens = lex.start();
-        assertEquals(TokenType.DOUBLE, tokens.get(2).type());
+        assertEquals(TokenType.Literal.DOUBLE, tokens.get(2).type());
         assertEquals(2000.00, tokens.get(2).literal());
 
-        assertEquals(TokenType.INT, tokens.get(3).type());
+        assertEquals(TokenType.Literal.INT, tokens.get(3).type());
         assertEquals(100, tokens.get(3).literal());
 
-        assertEquals(TokenType.FLOAT, tokens.get(4).type());
+        assertEquals(TokenType.Literal.FLOAT, tokens.get(4).type());
         assertEquals(200.00f, tokens.get(4).literal());
 
-        assertEquals(TokenType.LONG, tokens.get(5).type());
+        assertEquals(TokenType.Literal.LONG, tokens.get(5).type());
         assertEquals(1L, tokens.get(5).literal());
 
-        assertEquals(TokenType.DOUBLE, tokens.get(6).type());
+        assertEquals(TokenType.Literal.DOUBLE, tokens.get(6).type());
         assertEquals(99D, tokens.get(6).literal());
     }
 
@@ -56,13 +56,13 @@ public class LexTest {
                 """);
         var tokens = lex.start();
 
-        assertEquals(TokenType.DEFINE, tokens.get(1).type());
-        assertEquals(TokenType.IDENTIFIER, tokens.get(2).type());
+        assertEquals(TokenType.Definition.DEFINE, tokens.get(1).type());
+        assertEquals(TokenType.Literal.IDENTIFIER, tokens.get(2).type());
 
-        assertEquals(TokenType.FOR_I, tokens.get(6).type());
-        assertEquals(TokenType.IDENTIFIER, tokens.get(12).type());
-        assertEquals(TokenType.IDENTIFIER, tokens.get(15).type());
-        assertEquals(TokenType.IDENTIFIER, tokens.get(18).type());
+        assertEquals(TokenType.Expression.FOR_I, tokens.get(6).type());
+        assertEquals(TokenType.Literal.IDENTIFIER, tokens.get(12).type());
+        assertEquals(TokenType.Literal.IDENTIFIER, tokens.get(15).type());
+        assertEquals(TokenType.Literal.IDENTIFIER, tokens.get(18).type());
 
     }
 

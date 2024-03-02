@@ -1,148 +1,243 @@
 package parse.token;
 
 import java.util.Arrays;
+import java.util.function.Function;
+import java.util.stream.Stream;
 
 
-public enum TokenType {
-    // SINGLE
-    LEFT_PAREN("("),
-    RIGHT_PAREN(")"),
-    LEFT_BRACE("{"),
-    RIGHT_BRACE("}"),
-    LEFT_BRACKET("["),
-    RIGHT_BRACKET("]"),
-    COMMA(","),
-    DOT("."),
-    MINUS("-"),
-    PLUS("+"),
-    ASTERISK("*"),
-    COLON(":"),
-    SEMI_COLON(";"),
-    SLASH("/"),
-    BACK_SLASH("\\"),
-    SINGLE_QUOTE("'"),
-    QUOTE("\""),
-    CARET("^"),
-    PERCENT("%"),
-    POUND("#"),
-    CACHE("$"),
-    AMPERSAND("&"),
-    EQUAL("="),
-    AT("@"),
-    GRAVE("`"),
-    BAR("|"),
-    TILDE("~"),
-    BANG("!"),
-    GREATER(">"),
-    LESS("<"),
+public sealed interface TokenType {
 
-    // Compound
-    BANG_EQUAL("!="),
-    EQUAL_EQUAL("++"),
-    GREATER_EQUAL(">="),
-    LESS_EQUAL("<="),
-    PLUS_PLUS("++"),
-    MINUS_MINUS("--"),
-    ASSIGN(":="),
-    TRUE("#t"),
-    FALSE("#f"),
+    enum Lexical implements TokenType {
+        LEFT_PAREN("("),
+        RIGHT_PAREN(")"),
+        LEFT_BRACE("{"),
+        RIGHT_BRACE("}"),
+        LEFT_BRACKET("["),
+        RIGHT_BRACKET("]"),
+        COMMA(","),
+        BACK_SLASH("\\"),
+        SINGLE_QUOTE("'"),
+        QUOTE("\""),
+        EOF(null);
 
-    // Complex
-    IDENTIFIER(null),
-    STRING(null),
-    TYPE(("::")),
-    INT(null),
-    LONG(null),
-    FLOAT(null),
-    DOUBLE(null),
+        public final String stringValue;
 
-    // Keywords
-    AND("and"),
-    OR("or"),
-    XOR("xor"),
-    NAND("nand"),
-    IF(""),
-    ELSE("else"),
-    EQUALS("equals"),
-    COND("cond"),
-    DEFINE("define"),
-    FUNC("func"),
-    NULL("null"),
-    PRINT("print"),
-    SUPER("super"),
-    THIS("this"),
-    FOR_I("for-i"),
-    FOR_EACH("for-each"),
-    CONS("cons"),
-    CAR("car"),
-    CAAR("caar"),
-    CADR("cadr"),
-    CDR("cdr"),
-    CDDR("cddr"),
-    CDAR("cdar"),
-    // End
-    EOF(null);
+        Lexical(String stringValue) { this.stringValue = stringValue; }
 
-    public final String asString;
-    private static final SingleToken[] SINGLE_TOKENS;
-    private static final DoubleToken[] DOUBLE_TOKENS;
-    private static final KeyWordToken[] KEYWORD_TOKENS;
+        @Override
+        public String asString() {
+            return stringValue;
+        }
+    }
+
+    enum Syntactic implements TokenType {
+        DOT("."),
+        AMPERSAND("&"),
+        GRAVE("`"),
+        COLON(":"),
+        SEMI_COLON(";"),
+        TYPE("::"),
+        POUND("#"),
+        CACHE("$"),
+        AT("@"),
+        BAR("|"),
+        TILDE("~"),
+        SUPER("super"),
+        THIS("this"),
+        EQUAL("=");
+
+        public final String stringValue;
+
+        Syntactic(String stringValue) { this.stringValue = stringValue; }
+
+        @Override
+        public String asString() {
+            return stringValue;
+        }
+    }
+
+    enum Operation implements TokenType {
+        PLUS("+"),
+        MINUS("-"),
+        ASTERISK("*"),
+        SLASH("/"),
+        CARET("^"),
+        PERCENT("%"),
+        EQUALS("equals"),
+        BANG_EQUAL("!="),
+        REF_EQUALS("=="),
+
+        GREATER(">"),
+        LESS("<"),
+        GREATER_EQUAL(">="),
+        LESS_EQUAL("<="),
+        PLUS_PLUS("++"),
+        MINUS_MINUS("--"),
 
 
-    static {
-        SINGLE_TOKENS = Arrays.stream(TokenType.values())
-                .filter(t -> t.asString != null && t.asString.length() == 1)
-                .map(t -> new SingleToken(t.asString.charAt(0), t))
+        AND("and"),
+        OR("or"),
+        NEGATE("!"),
+        XOR("xor"),
+        NAND("nand");
+
+        public final String stringValue;
+
+        Operation(String stringValue) { this.stringValue = stringValue; }
+
+        @Override
+        public String asString() {
+            return stringValue;
+        }
+    }
+
+    enum Literal implements TokenType {
+        TRUE("#t"),
+        FALSE("#f"),
+        STRING(null),
+        INT(null),
+        LONG(null),
+        FLOAT(null),
+        DOUBLE(null),
+        IDENTIFIER(null),
+        NULL("null");
+
+        public final String stringValue;
+
+        Literal(String stringValue) { this.stringValue = stringValue; }
+
+        @Override
+        public String asString() {
+            return stringValue;
+        }
+    }
+
+    enum Expression implements TokenType {
+        ASSIGN(":="),
+        IF("if"),
+        ELSE("else"),
+        COND("cond"),
+        PRINT("print"),
+        BEGIN("begin"),
+        FOR_I("for-i"),
+        FOR_EACH("for-each"),
+        WHILE("while"),
+        CONS("cons"),
+        CAR("car"),
+        CAAR("caar"),
+        CADR("cadr"),
+        CDR("cdr"),
+        CDDR("cddr"),
+        CDAR("cdar");
+
+        public final String stringValue;
+
+        Expression(String stringValue) { this.stringValue = stringValue; }
+
+        @Override
+        public String asString() {
+            return stringValue;
+        }
+    }
+
+    enum Definition implements TokenType {
+        DEFINE("define"),
+        FUNC("func"),
+        LAMBDA("lambda");;
+        public final String stringValue;
+
+        Definition(String stringValue) { this.stringValue = stringValue; }
+
+        @Override
+        public String asString() {
+            return stringValue;
+        }
+    }
+
+    enum Modifier implements TokenType {
+        MUTABLE("&mut"),
+        MUTABLE_ALL("&mut-all"),
+        FINAL("&fin"),
+        FINAL_ALL("&fin-all"),
+        VOLATILE("&vol"),
+        VOLATILE_ALL("&vol-all"),
+        PRIVATE("&priv"),
+        PRIVATE_ALL("&priv-all"),
+        PUBLIC("&pub"),
+        PUBLIC_ALL("&pub-all"),
+        PROTECTED("&prot"),
+        PROTECTED_ALL("&prot-all"),
+        STATIC("&stat"),
+        STATIC_ALL("&stat-all"),
+        SYNCHRONIZED("&sync"),
+        SYNCHRONIZED_ALL("&sync-all"),
+        CLOSURE_CLONE("&clos-clone"),
+        OPTIONAL("&opt"),
+        REST("&rest");
+
+        public final String stringValue;
+//        public static final Modifier[] DEFINITION_MODIFIERS = new Modifier[]{
+//                MUTABLE,
+//                MUTABLE_ALL,
+//                FINAL,
+//                FINAL_ALL,
+//
+//        }
+
+        Modifier(String stringValue) { this.stringValue = stringValue; }
+
+        @Override
+        public String asString() {
+            return stringValue;
+        }
+    }
+
+    // Utility
+
+    String asString();
+
+    record SingleToken(char chr, TokenType tokenType) { }
+
+    record DualTokens(char chr1, char chr2, TokenType tokenType) { }
+
+    record KeyWordToken(String keyword, TokenType tokenType) { }
+
+    private static Stream<TokenType> getAllStream() {
+        return Stream.of(
+                Arrays.stream(Lexical.values()),
+                Arrays.stream(Syntactic.values()),
+                Arrays.stream(Operation.values()),
+                Arrays.stream(Literal.values()),
+                Arrays.stream(Expression.values()),
+                Arrays.stream(Definition.values()),
+                Arrays.stream(Modifier.values())
+        ).flatMap(Function.identity());
+
+    }
+
+    static SingleToken[] getSingleTokens() {
+        return getAllStream().filter(t -> t.asString() != null && t.asString().length() == 1)
+                .map(t -> new SingleToken(t.asString().charAt(0), t))
                 .toArray(SingleToken[]::new);
+    }
 
-        DOUBLE_TOKENS = Arrays.stream(TokenType.values())
-                .filter(t -> t.asString != null && t.asString.length() == 2)
-                .map(t -> new DoubleToken(t.asString.charAt(0), t.asString.charAt(1), t))
-                .toArray(DoubleToken[]::new);
+    static DualTokens[] getDualTokens() {
+        return getAllStream()
+                .filter(t -> t.asString() != null && t.asString().length() == 2)
+                .map(t -> new DualTokens(t.asString().charAt(0), t.asString().charAt(1), t))
+                .toArray(DualTokens[]::new);
+    }
 
-        KEYWORD_TOKENS = Arrays.stream(TokenType.values())
-                .filter(t -> t.asString != null && t.asString.length() > 2)
-                .map(t -> new KeyWordToken(t.asString, t))
+    static KeyWordToken[] getKeyWordTokens() {
+        return getAllStream()
+                .filter(t -> t.asString() != null && t.asString().length() > 2)
+                .map(t -> new KeyWordToken(t.asString(), t))
                 .toArray(KeyWordToken[]::new);
+
     }
 
-    TokenType(String asString) {
-        this.asString = asString;
-    }
-
-    public static TokenType matchSingle(char c) {
-        for (var t : SINGLE_TOKENS) {
-            if (t.chr == c) {
-                return t.tokenType;
-            }
-        }
-        return null;
-    }
-
-    public static TokenType matchDouble(char c1, char c2) {
-        for (var t : DOUBLE_TOKENS) {
-            if (t.chr1 == c1 && t.chr2 == c2) {
-                return t.tokenType;
-            }
-        }
-        return null;
-    }
-
-    public static TokenType matchKeyWord(String word) {
-        for (var t : KEYWORD_TOKENS) {
-            if (t.keyword.equals(word)) {
-                return t.tokenType;
-            }
-        }
-        return null;
-    }
-
-    private record SingleToken(char chr, TokenType tokenType) { }
-
-
-    private record DoubleToken(char chr1, char chr2, TokenType tokenType) { }
-
-
-    private record KeyWordToken(String keyword, TokenType tokenType) { }
 }
+
+
+
 
