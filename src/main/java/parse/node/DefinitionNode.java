@@ -1,61 +1,30 @@
 package parse.node;
 
-import parse.Modifier;
+import parse.token.TokenType;
 
 import java.util.List;
 
 
-public sealed interface DefinitionNode extends Node {
-    record FunctionDef(
-            String name,
-            List<Modifier> modifiers,
-            List<ParameterDef> parameterDefs,
-            List<Closure> closures,
-            Node body,
-            String returnType
-    ) implements DefinitionNode { }
+public sealed interface Definition extends Node {
 
-    record VariableDef(
-            String name,
-            String type,
-            List<Modifier> modifiers,
-            Node value
-    ) implements DefinitionNode { }
+    record FunctionDef(String name, LambdaDef lambda) implements ExpressionNode {
+        public FunctionDef(String name, List<TokenType.Modifier> modifiers, List<ParamDef> parameters,
+                Node body, String returnType) {
+            this(name, new LambdaDef(modifiers, parameters, body, returnType));
+        }
+    }
 
-    record LambdaDef(
-            String internalName,
-            List<Modifier> modifiers,
-            List<ParameterDef> parameterDefs,
-            List<Closure> closures,
-            Node body,
-            String returnType
-    ) implements DefinitionNode { }
+    record VariableDef(String name, List<TokenType.Modifier> modifiers, String type, Node value) implements Definition { }
 
-    record ParameterDef(
-            String name,
-            String type,
-            Node defaultValue
-    ) {
+    record LambdaDef(List<TokenType.Modifier> modifiers, List<ParamDef> parameters,
+                     Node body, String returnType) implements Definition { }
 
+    record ParamDef(String name, String type, boolean optional, Node defaultValue) implements Definition {
         public boolean isNamed() { return name != null; }
 
+        public boolean isOptional() { return optional; }
+
         public boolean hasDefaultValue() { return defaultValue != null; }
-
-        public static ParameterDef ofUntyped(String name) {
-            return new ParameterDef(name, "NONE", null);
-        }
-
-        public static ParameterDef ofTyped(String name, String type) {
-            return new ParameterDef(name, type, null);
-        }
-
-        public static ParameterDef ofDefUnTypes(String name, Node value) {
-            return new ParameterDef(name, "NONE", value);
-        }
-
-        public static ParameterDef ofDefTyped(String name, String type, Node value) {
-            return new ParameterDef(name, type, value);
-        }
 
     }
 
