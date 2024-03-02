@@ -21,6 +21,7 @@ public class Parser {
     private Function<String, IllegalStateException> onError = (String msg) -> {
         Token currToken = peek();
         String error = String.format("[Line: %d, Token: %d] Error: %s", currToken.line(), current, msg);
+        printRemainingTokens();
         return new IllegalStateException(error);
     };
 
@@ -51,7 +52,7 @@ public class Parser {
 
     private Node parseSExpr() {
         Node expression = null;
-        consumeLParen("Expected start of s-expression: " + peek().literal());
+        consumeLParen("Expected start of s-expression: " + peek().type());
         expression = parseExpressionData();
         consumeRParen("Expected closing parenthesis of expression, found: " + peek().type());
 
@@ -61,8 +62,23 @@ public class Parser {
         return expression;
     }
 
+    private Node parseFunc() {
+        consume(TokenType.Definition.FUNC, "Expected func, found: " + peek().type());
+        String name = consume(TokenType.Literal.IDENTIFIER, "Func definition without name").lexeme();
+        List<TokenType.Modifier> modifiers = match(TokenType.Modifier.values()) ? parseModifiers() : null;
+        List<DefinitionNode.ParamDef> parameters = parseParameters();
+
+        // Consume opening and closing parens for implicit multi statements
+        consumeLParen("");
+        Node body = parseMultiExpr();
+        consumeRParen("");
+
+        String returnType = (peek().type() == TokenType.Syntactic.TYPE) ? advance().lexeme() : null;
+        return new DefinitionNode.FunctionDef(name, modifiers, parameters, body, returnType);
+    }
+
     private Node parseDefine() {
-        consume(TokenType.Definition.DEFINE, "Expected definition, found: " + peek().type());
+        consume(TokenType.Definition.DEFINE, "Expected define, found: " + peek().type());
 
         String name = consume(TokenType.Literal.IDENTIFIER, "Definition without name").lexeme();
         List<TokenType.Modifier> modifiers = match(TokenType.Modifier.values()) ? parseModifiers() : null;
@@ -100,7 +116,11 @@ public class Parser {
         List<TokenType.Modifier> modifiers = match(TokenType.Modifier.values()) ? parseModifiers() : null;
 
         List<DefinitionNode.ParamDef> parameters = parseParameters();
-        Node body = parseSExpr();
+
+        // Consume opening and closing parens for implicit multi statements
+        consumeLParen("");
+        Node body = parseMultiExpr();
+        consumeRParen("");
 
         String returnType = (peek().type() == TokenType.Syntactic.TYPE) ? advance().lexeme() : null;
 
@@ -119,7 +139,6 @@ public class Parser {
                 advance();
             }
 
-            printRemainingTokens();
             String name = consume(TokenType.Literal.IDENTIFIER, "Parameter Identifier expected").literal().toString();
             LiteralNode value = null;
             String type = null;
@@ -151,11 +170,13 @@ public class Parser {
 
         switch (token.type()) {
             // TODO add case for inline arrays/lists
-            case TokenType.Definition.DEFINE -> {
-                return parseDefine();
-            }
-            case TokenType.Definition.LAMBDA -> {
-                return parseLambda();
+            case TokenType.Definition definition -> {
+                switch (definition) {
+                    case DEFINE -> { return parseDefine(); }
+                    case FUNC -> { return parseFunc(); }
+                    case LAMBDA -> { return parseLambda(); }
+                    default -> throw onError.apply("Unexpected syntax in expression: " + peek().type());
+                }
             }
             case TokenType.Expression expression -> {
                 return parseExactExpression((TokenType.Expression) token.type());
@@ -171,12 +192,13 @@ public class Parser {
 
     }
 
-    private ExpressionNode parseExactExpression(TokenType.Expression expression) {
+    private Node parseExactExpression(TokenType.Expression expression) {
         consume(expression, "Expected expression, found:" + peek().lexeme());
         switch (expression) {
             case ASSIGN -> { return parseAssign(); }
             case IF -> { return parseIf(); }
             case COND -> { return parseCond(); }
+            case BEGIN -> { return parseBegin(); }
 //            case PRINT -> { }
 //            case FOR_I -> { }
 //            case FOR_EACH -> { }
@@ -189,6 +211,27 @@ public class Parser {
 //            case CDDR -> { }
 //            case CDAR -> { }
             default -> throw onError.apply("Unsupported operation: " + peek().lexeme());
+        }
+    }
+
+    private Node parseBegin() {
+        consume(TokenType.Expression.BEGIN, "Expected begin symbol");
+        return parseMultiExpr();
+    }
+
+    private Node parseMultiExpr() {
+        List<Node> expressions = new ArrayList<>(4);
+
+        while (peek().type() != TokenType.Lexical.RIGHT_PAREN) {
+            expressions.add(parseExpressionData());
+        }
+        if (expressions.isEmpty()) {
+            throw onError.apply("Expected one or more expressions");
+        }
+        if (expressions.size() > 1) {
+            return new ExpressionNode.MultiExpr(expressions);
+        } else {
+            return expressions.getFirst();
         }
     }
 

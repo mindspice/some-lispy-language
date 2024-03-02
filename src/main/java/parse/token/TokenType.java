@@ -118,7 +118,7 @@ public sealed interface TokenType {
 
         COND("cond"),
         PRINT("print"),
-        // BEGIN("begin"),
+        BEGIN("begin"),
         FOR_I("for-i"),
         FOR_EACH("for-each"),
         WHILE("while"),

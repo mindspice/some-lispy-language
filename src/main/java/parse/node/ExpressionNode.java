@@ -1,6 +1,7 @@
 package parse.node;
 
 import language.types.data.Pair;
+import parse.token.TokenType;
 
 import java.util.List;
 
@@ -8,6 +9,8 @@ import java.util.List;
 public sealed interface ExpressionNode extends Node {
 
     record AssignOp(String identity, Node value) implements ExpressionNode { }
+
+    record MultiExpr(List<Node> expressions) implements ExpressionNode { }
 
     record IfExpr(CondBranch condBranch, Node elseBranch) implements ExpressionNode {
         public boolean hasElse() { return elseBranch != null; }

@@ -12,12 +12,8 @@ public class ParseTest {
     void RandomTest() {
 
         String s = """
-                (cond
-                  ((< x 0) 10)
-                  ((> x 0) 20)
-                  ((== x 0) 0)
-                  (#t (* 10 20))
-                  )
+                (func my-function &stat &sync (arg1 ::int &opt arg2=2 ::int)
+                 (* 2 2) ::int )
                 """;
         var lex = new Lexer(s).start();
         var parse = new Parser(lex).start();
