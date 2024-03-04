@@ -12,12 +12,12 @@ public class ParseTest {
     void RandomTest() {
 
 
-        String s = """
-              
-                """;
-        var lex = new Lexer(s).start();
-        var parse = new Parser(lex).start();
-        System.out.println(parse);
+//        String s = """
+//               (* 2 2)
+//                """;
+//        var lex = new Lexer(s).start();
+//        var parse = new Parser(lex).start();
+//        System.out.println(parse);
 
     }
 }

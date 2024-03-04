@@ -1,7 +1,6 @@
 package parse.node;
 
-import language.types.data.Pair;
-import parse.token.TokenType;
+
 
 import java.util.List;
 
@@ -24,9 +23,9 @@ public sealed interface ExpressionNode extends Node {
         public boolean hasElse() { return elseBranch != null; }
     }
 
-    record ForIExpr(int start, int end, int progAmount, CollectionNode collection, Node body) implements ExpressionNode { }
+   // record ForIExpr(int start, int end, int progAmount, CollectionNode collection, Node body) implements ExpressionNode { }
 
-    record ForEachExpr(CollectionNode collection, Node body) implements ExpressionNode { }
+   // record ForEachExpr(CollectionNode collection, Node body) implements ExpressionNode { }
 
     record While(Node condition, Node body) implements ExpressionNode { }
 

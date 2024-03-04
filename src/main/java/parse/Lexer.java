@@ -12,8 +12,8 @@ import java.util.function.Consumer;
 
 public class Lexer {
 
-    private final String source;
-    private final List<Token> tokens;
+    private String source;
+    private List<Token> tokens;
     private int startIndex = 0;
     private int currIndex = 0;
     private int lineNum = 1;
@@ -23,13 +23,45 @@ public class Lexer {
     private final TokenType.KeyWordToken[] KEYWORD_TOKENS;
     private final TokenType.ModifierToken[] MODIFIER_TOKENS;
 
-    public Lexer(String source) {
-        this.source = source;
-        this.tokens = new ArrayList<>(source.length() / 5);
+    public Lexer() {
+
         SINGLE_TOKENS = TokenType.getSingleTokens();
         DUAL_TOKENS = TokenType.getDualTokens();
         KEYWORD_TOKENS = TokenType.getKeyWordTokens();
         MODIFIER_TOKENS = TokenType.getModifierTokens();
+    }
+
+    public List<Token> process(String source) {
+        startIndex = 0;
+        currIndex = 0;
+        lineNum = 1;
+        this.source = source;
+        this.tokens = new ArrayList<>(source.length() / 5);
+
+        while (haveNext()) {
+            startIndex = currIndex;
+            char currChar = advance();
+
+            switch (currChar) {
+                case ' ', '\r', '\t' -> { continue; }
+                case '\n' -> {
+                    lineNum++;
+                    continue;
+                }
+            }
+
+            if (lexDualToken(currChar)) { continue; }
+            if (lexSingleToken(currChar)) { continue; }
+            if (isNumeric(currChar)) {
+                lexNumber();
+                continue;
+            }
+            if (lexKeywordOrIdentifier()) { continue; }
+
+            throw new IllegalStateException("Invalid formatting encountered on line: " + lineNum);
+        }
+        addToken(TokenType.Lexical.EOF);
+        return tokens;
     }
 
     public TokenType matchSingle(char c) {
@@ -66,36 +98,6 @@ public class Lexer {
             }
         }
         return null;
-    }
-
-    public List<Token> start() {
-        while (haveNext()) {
-            startIndex = currIndex;
-            char currChar = advance();
-
-            switch (currChar) {
-                case ' ', '\r', '\t' -> { continue; }
-                case '\n' -> {
-                    lineNum++;
-                    continue;
-                }
-            }
-
-            if (lexDualToken(currChar)) { continue; }
-            if (lexSingleToken(currChar)) { continue; }
-
-            if (isNumeric(currChar)) {
-                lexNumber();
-                continue;
-            }
-
-            if (lexKeywordOrIdentifier()) { continue; }
-
-            //System.out.println(currChar);
-            throw new IllegalStateException("Invalid formatting encountered on line: " + lineNum);
-        }
-        addToken(TokenType.Lexical.EOF);
-        return tokens;
     }
 
     private boolean lexSingleToken(char c) {
@@ -171,26 +173,37 @@ public class Lexer {
     public void lexNumber() {
         char litType = '\0';
 
+        if (peekOne() == '.') {
+            advance();
+            litType = 'd';
+        }
+
         while (isNumeric(peekOne())) {
+            System.out.println(peekOne());
             advance();
 
-            char nextPeek = peekOne();
-            if (nextPeek == '.' && isNumeric(peekTwo())) {
+            if (peekOne() == '.' && isNumeric(peekTwo())) {
                 advance();
                 litType = 'd';
             }
         }
 
         char nextPeek = peekOne();
+        boolean skipLit = false;
         if (nextPeek == 'f' || nextPeek == 'F') {
             litType = 'f';
             numTermCheck.accept(peekTwo());
+            skipLit = true;
         } else if (nextPeek == 'l' || nextPeek == 'L') {
             numTermCheck.accept(peekTwo());
             litType = 'l';
+            skipLit = true;
+
         } else if (nextPeek == 'd' || nextPeek == 'D') {
             litType = 'd';
             numTermCheck.accept(peekTwo());
+            skipLit = true;
+
         }
 
         switch (litType) {
@@ -206,13 +219,12 @@ public class Lexer {
                 }
             }
         }
-        if (litType == 'f' || litType == 'l' || litType == 'd') {
+        if (skipLit) {
             advance();
         }
     }
 
     public boolean lexKeywordOrIdentifier() {
-
         while (isAlphaNumeric(peekOne())) {
             advance();
         }
@@ -247,11 +259,11 @@ public class Lexer {
         return (c >= 'a' && c <= 'z')
                 || (c >= 'A' && c <= 'Z')
                 || c == '_'
-                || c == '-'; // - is not valid to start an identifier(will lex as minus), but can occur mid-identifier, change this?
+                || c == '-';
     }
 
     private boolean isDefEnd(char c) {
-        return c == ' ' || c == '\r' || c == '\n' || c == '\t' || c ==')';
+        return c == ' ' || c == '\r' || c == '\n' || c == '\t' || c == ')';
     }
 
     private boolean isAlphaNumeric(char c) {
@@ -268,17 +280,16 @@ public class Lexer {
     }
 
     //  Helpers
-    private char[] terminalChars = new char[]{' ', ')', '}', ']'};
+    private final char[] terminalChars = new char[]{' ', ')', '}', ']'};
 
     private boolean isTerminalChar(char c) {
         for (char t : terminalChars) {
             if (c == t) { return true; }
-            ;
         }
         return false;
     }
 
-    private Consumer<Character> numTermCheck = (c) -> {
+    private final Consumer<Character> numTermCheck = (c) -> {
         if (c != ' ' && c != ')') {
             throw new IllegalStateException("Encountered data directly after numeric literal terminator on line: " + lineNum);
         }

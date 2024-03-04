@@ -10,22 +10,27 @@ import java.util.function.Function;
 
 
 public class Parser {
-    private final List<Token> tokens;
+    private List<Token> tokens;
     private int current = 0;
     private int depth = 0;
 
-    public Parser(List<Token> tokens) {
-        this.tokens = tokens;
+    public Parser() {
+
     }
 
-    private Function<String, IllegalStateException> onError = (String msg) -> {
+    private final Function<String, IllegalStateException> onError = (String msg) -> {
         Token currToken = peek();
         String error = String.format("[Line: %d, Token: %d] Error: %s", currToken.line(), current, msg);
         printRemainingTokens();
         return new IllegalStateException(error);
     };
 
-    public Node start() {
+    public Node.Program process(List<Token> tokens) {
+        this.tokens = tokens;
+
+        current = 0;
+        depth = 0;
+
         List<Node> topLevelExpressions = new ArrayList<>(100);
 
         while (haveNext()) {
@@ -47,7 +52,7 @@ public class Parser {
             //  }
 
         }
-        return new Node.program(topLevelExpressions);
+        return new Node.Program(topLevelExpressions);
     }
 
     private Node parseSExpr() {
@@ -68,7 +73,7 @@ public class Parser {
         List<TokenType.Modifier> modifiers = match(TokenType.Modifier.values()) ? parseModifiers() : null;
         List<DefinitionNode.ParamDef> parameters = parseParameters();
 
-        // Consume opening and closing parens for implicit multi statements
+        // Consume opening and closing parens for implicit multi expressions
         consumeLParen("");
         Node body = parseMultiExpr();
         consumeRParen("");
@@ -167,39 +172,30 @@ public class Parser {
         if (token.type() == TokenType.Lexical.LEFT_PAREN) {
             return parseSExpr();
         }
-
-        switch (token.type()) {
+        return switch (token.type()) {
             // TODO add case for inline arrays/lists
-            case TokenType.Definition definition -> {
-                switch (definition) {
-                    case DEFINE -> { return parseDefine(); }
-                    case FUNC -> { return parseFunc(); }
-                    case LAMBDA -> { return parseLambda(); }
-                    default -> throw onError.apply("Unexpected syntax in expression: " + peek().type());
-                }
-            }
-            case TokenType.Expression expression -> {
-                return parseExactExpression((TokenType.Expression) token.type());
-            }
-            case TokenType.Operation operation -> {
-                return parseOperation((TokenType.Operation) token.type());
-            }
-            case TokenType.Literal literal -> {
-                return parseLiteral(); // Directly return literals
-            }
+            case TokenType.Definition definition -> switch (definition) {
+                case DEFINE -> parseDefine();
+                case FUNC -> parseFunc();
+                case LAMBDA -> parseLambda();
+            };
+            case TokenType.Expression expression -> parseExactExpression(expression);
+            case TokenType.Operation operation -> parseOperation(operation);
+            case TokenType.Literal literal -> parseLiteral();
+
             default -> throw onError.apply("Unexpected syntax in expression: " + peek().type());
-        }
+        };
 
     }
 
     private Node parseExactExpression(TokenType.Expression expression) {
         consume(expression, "Expected expression, found:" + peek().lexeme());
-        switch (expression) {
-            case ASSIGN -> { return parseAssign(); }
-            case IF -> { return parseIf(); }
-            case COND -> { return parseCond(); }
-            case BEGIN -> { return parseMultiExpr(); }
-            case PRINT -> { return parsePrint(); }
+        return switch (expression) {
+            case ASSIGN -> parseAssign();
+            case IF -> parseIf();
+            case COND -> parseCond();
+            case BEGIN -> parseMultiExpr();
+            case PRINT -> parsePrint();
 //            case FOR_I -> { }
 //            case FOR_EACH -> { }
 //            case WHILE -> { }
@@ -211,7 +207,7 @@ public class Parser {
 //            case CDDR -> { }
 //            case CDAR -> { }
             default -> throw onError.apply("Unsupported operation: " + peek().lexeme());
-        }
+        };
     }
 
     private Node parseMultiExpr() {
@@ -275,39 +271,23 @@ public class Parser {
         return new ExpressionNode.CondExpr(condBranches, elseBranch);
     }
 
-    private OperationNode parseOperation(TokenType.Operation operation) {
+    private OperationNode parseOperation(TokenType operation) {
         consume(operation, "Expected operation, found:" + peek().type());
 
-        List<Node> operands = new ArrayList<>(3);
+        List<Node> operands = new ArrayList<>(5);
         while (peek().type() != TokenType.Lexical.RIGHT_PAREN && haveNext()) {
             operands.add(parseExpressionData());
         }
 
-        if (operands.isEmpty()) {
-            throw onError.apply("Operation must have arguments");
-        }
         if (operation == TokenType.Operation.NEGATE && operands.size() > 1) {
-            throw onError.apply("Unary operation can only have 1 argument");
+            throw onError.apply("Negate is only valid as a unary operation");
+        }
+        if (operands.size() < 2) {
+            throw onError.apply("Operation requires 2 or more arguments");
         }
 
-        switch (operation) {
-            case PLUS, MINUS, ASTERISK, SLASH, CARET, PERCENT, PLUS_PLUS, MINUS_MINUS -> {
-                return new OperationNode.ArithmeticOp(operation, operands);
-            }
-            case EQUALS, REF_EQUALS, BANG_EQUAL -> {
-                return new OperationNode.EqualityOp(operation, operands);
-            }
-            case GREATER, LESS, GREATER_EQUAL, LESS_EQUAL -> {
-                return new OperationNode.ComparisonOp(operation, operands);
-            }
-            case AND, OR, NAND, XOR -> {
-                return new OperationNode.BooleanOp(operation, operands);
-            }
-            case NEGATE -> {
-                return new OperationNode.UnaryOp(operation, operands.getFirst());
-            }
-            default -> throw (onError.apply("Fatal(Unrecognized operand"));
-        }
+        return OperationNode.getOperationNode((TokenType.Operation) operation, operands);
+
     }
 
     private LiteralNode parseLiteral() {

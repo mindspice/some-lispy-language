@@ -58,31 +58,40 @@ public sealed interface TokenType {
     }
 
     enum Operation implements TokenType {
+        // Boolean
+        AND("and"),
+        OR("or"),
+        NOR("nor"),
+        XOR("xor"),
+        XNOR("xnor"),
+        NAND("nand"),
+        NEGATE("not"),
+
+        // Arithmetic
         PLUS("+"),
         MINUS("-"),
         ASTERISK("*"),
         SLASH("/"),
         CARET("^"),
         PERCENT("%"),
-        EQUALS("equals"),
-        BANG_EQUAL("!="),
-        REF_EQUALS("=="),
+        PLUS_PLUS("++"),
+        MINUS_MINUS("--"),
 
+
+        // Comparison
         GREATER(">"),
         LESS("<"),
         GREATER_EQUAL(">="),
         LESS_EQUAL("<="),
-        PLUS_PLUS("++"),
-        MINUS_MINUS("--"),
 
-        AND("and"),
-        OR("or"),
-        NEGATE("!"),
-        XOR("xor"),
-        NAND("nand");
+        // Equality
+        EQUALS("equals"),
+        BANG_EQUAL("!="),
+        REF_EQUALS("==");
+
+
 
         public final String stringValue;
-
         Operation(String stringValue) { this.stringValue = stringValue; }
 
         @Override
@@ -90,6 +99,9 @@ public sealed interface TokenType {
             return stringValue;
         }
     }
+
+
+
 
     enum Literal implements TokenType {
         TRUE("#t"),
@@ -177,7 +189,6 @@ public sealed interface TokenType {
 
         public final String stringValue;
 
-
         Modifier(String stringValue) { this.stringValue = stringValue; }
 
         @Override
@@ -196,7 +207,7 @@ public sealed interface TokenType {
 
     record KeyWordToken(String keyword, TokenType tokenType) { }
 
-    record ModifierToken(String modifierLexeme,TokenType tokenType) {}
+    record ModifierToken(String modifierLexeme, TokenType tokenType) { }
 
     private static Stream<TokenType> getAllStream() {
         return Stream.of(
