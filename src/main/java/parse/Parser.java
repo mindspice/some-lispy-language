@@ -27,30 +27,13 @@ public class Parser {
 
     public Node.Program process(List<Token> tokens) {
         this.tokens = tokens;
-
         current = 0;
         depth = 0;
 
         List<Node> topLevelExpressions = new ArrayList<>(100);
 
         while (haveNext()) {
-            topLevelExpressions.add(parseSExpr());
-//            switch (peek().type()) {
-//                case TokenType.Definition definition -> {
-//                    switch (definition) {
-//                        case DEFINE -> topLevelExpressions.add(parseDefine());
-//                        case FUNC -> throw onError.apply("Unsupported top level operation: " + peek().type());
-//                        case LAMBDA -> throw onError.apply("Unsupported top level operation: " + peek().type());
-//                    }
-//                }
-//                case TokenType.Expression expression -> topLevelExpressions.add(parseGeneralExpression());
-//                case TokenType.Lexical lexical -> throw onError.apply("Unsupported top level operation: " + peek().type());
-//                case TokenType.Literal literal -> throw onError.apply("Unsupported top level operation: " + peek().type());
-//                case TokenType.Modifier modifier -> throw onError.apply("Unsupported top level operation: " + peek().type());
-//                case TokenType.Operation operation -> topLevelExpressions.add(parseOperation((TokenType.Operation) peek().type()));
-//                case TokenType.Syntactic syntactic -> throw onError.apply("Unsupported top level operation: " + peek().type());
-            //  }
-
+            topLevelExpressions.add(parseExpressionData());
         }
         return new Node.Program(topLevelExpressions);
     }
@@ -95,7 +78,7 @@ public class Parser {
 
             if (peekN(2).type() == TokenType.Definition.LAMBDA) {
                 consumeLParen("Expected start of s-expr, found " + peek().type());
-                DefinitionNode.LambdaDef lambda = parseLambda();
+                LiteralNode.LambdaLit lambda = parseLambda();
                 definitionNode = new DefinitionNode.FunctionDef(name, lambda);
                 consumeRParen("Expected end of s-expr, found: " + peek().type());
 
@@ -116,7 +99,7 @@ public class Parser {
         return definitionNode;
     }
 
-    private DefinitionNode.LambdaDef parseLambda() {
+    private LiteralNode.LambdaLit parseLambda() {
         consume(TokenType.Definition.LAMBDA, "Expected lambda, found:" + peek().type());
         List<TokenType.Modifier> modifiers = match(TokenType.Modifier.values()) ? parseModifiers() : null;
 
@@ -129,7 +112,7 @@ public class Parser {
 
         String returnType = (peek().type() == TokenType.Syntactic.TYPE) ? advance().lexeme() : null;
 
-        return new DefinitionNode.LambdaDef(modifiers, parameters, body, returnType);
+        return new LiteralNode.LambdaLit(new DefinitionNode.LambdaDef(modifiers, parameters, body, returnType));
     }
 
     private List<DefinitionNode.ParamDef> parseParameters() {
@@ -139,13 +122,15 @@ public class Parser {
 
         boolean optional = false;
         while (peek().type() != TokenType.Lexical.RIGHT_PAREN && haveNext()) {
-            if (peek().type() == TokenType.Modifier.OPTIONAL) {
-                optional = true;
-                advance();
+            List<TokenType.Modifier> modifiers = parseModifiers();
+            if (!optional) {
+                optional = modifiers.contains(TokenType.Modifier.OPTIONAL);
             }
+            boolean dynamic = modifiers.contains(TokenType.Modifier.DYNAMIC);
+            boolean mutable = modifiers.contains(TokenType.Modifier.MUTABLE);
 
             String name = consume(TokenType.Literal.IDENTIFIER, "Parameter Identifier expected").literal().toString();
-            LiteralNode value = null;
+            Node value = null;
             String type = null;
 
             if (peek().type() == TokenType.Syntactic.EQUAL) {
@@ -159,7 +144,7 @@ public class Parser {
             if (peek().type() == TokenType.Syntactic.TYPE) {
                 type = advance().literal().toString();
             }
-            params.add(new DefinitionNode.ParamDef(name, type, optional, value));
+            params.add(new DefinitionNode.ParamDef(name, type, optional, value, dynamic, mutable || dynamic));
         }
 
         consumeRParen("Error parsing parameters");
@@ -198,7 +183,7 @@ public class Parser {
             case PRINT -> parsePrint();
 //            case FOR_I -> { }
 //            case FOR_EACH -> { }
-//            case WHILE -> { }
+            case WHILE -> parseWhile();
 //            case CONS -> { }
 //            case CAR -> { }
 //            case CAAR -> { }
@@ -242,14 +227,18 @@ public class Parser {
     }
 
     private ExpressionNode parsePrint() {
-        return new ExpressionNode.PrintExpr(parseSExpr());
+        if (peek().literal() instanceof LiteralNode literal) {
+            return new ExpressionNode.PrintExpr(literal);
+        } else {
+            return new ExpressionNode.PrintExpr(parseExpressionData());
+        }
     }
 
     private ExpressionNode.CondBranch parseCondBranch() {
-        consumeLParen("Expected opening parenthesis conditional branch expression");
+        consumeLParen("Expected opening parenthesis for conditional branch expression");
         Node condition = parseExpressionData();
         Node thenBranch = parseExpressionData();
-        consumeRParen("Expected closing parenthesis conditional branch expression");
+        consumeRParen("Expected closing parenthesis for conditional branch expression");
         return new ExpressionNode.CondBranch(condition, thenBranch);
     }
 
@@ -268,6 +257,9 @@ public class Parser {
             }
             condBranches.add(parseCondBranch());
         }
+        if (condBranches.isEmpty()) {
+            throw onError.apply("Cond expression must have at least one branch");
+        }
         return new ExpressionNode.CondExpr(condBranches, elseBranch);
     }
 
@@ -282,15 +274,15 @@ public class Parser {
         if (operation == TokenType.Operation.NEGATE && operands.size() > 1) {
             throw onError.apply("Negate is only valid as a unary operation");
         }
-        if (operands.size() < 2) {
-            throw onError.apply("Operation requires 2 or more arguments");
-        }
+//        if (operands.size() < 2 && (operation != TokenType.Operation.)) {
+//            throw onError.apply("Operation requires 2 or more arguments");
+//        }
 
         return OperationNode.getOperationNode((TokenType.Operation) operation, operands);
 
     }
 
-    private LiteralNode parseLiteral() {
+    private Node parseLiteral() {
         Token token = advance();
         if (token.type() instanceof TokenType.Literal literal) {
             return switch (literal) {
@@ -301,11 +293,41 @@ public class Parser {
                 case LONG -> new LiteralNode.LongLit((Long) token.literal());
                 case FLOAT -> new LiteralNode.FloatLit((Float) token.literal());
                 case DOUBLE -> new LiteralNode.DoubleLit((Double) token.literal());
-                case IDENTIFIER -> new LiteralNode.ObjectLit(token.literal());
+                case IDENTIFIER -> parseIdentifier(token.lexeme());
                 case NULL -> new LiteralNode.NullLit();
             };
         }
         throw (onError.apply("Expected literal value"));
+    }
+
+    private Node parseIdentifier(String identifier) {
+        if (previousN(2).type() == TokenType.Lexical.LEFT_PAREN) {
+            List<ExpressionNode.FuncArg> args = new ArrayList<>(5);
+            boolean atOpt = false;
+            while (peek().type() != TokenType.Lexical.RIGHT_PAREN) {
+                ExpressionNode.FuncArg funcArg = parseFuncArgument();
+                if (funcArg.isNamed()) { atOpt = true; }
+                if (atOpt && !funcArg.isNamed()) {
+                    throw onError.apply("All arguments following first named argument must be also named");
+                }
+                args.add(parseFuncArgument());
+            }
+            return new ExpressionNode.FunctionCall(identifier, args);
+        } else {
+            return new ExpressionNode.LiteralCall(identifier);
+        }
+    }
+
+    private ExpressionNode.FuncArg parseFuncArgument() {
+        if (peek().type() == TokenType.Syntactic.COLON) {
+            advance(); // consume colon
+            String name = consume(TokenType.Literal.IDENTIFIER, "Expected named identifier for argument").lexeme();
+            Node arg = parseExpressionData();
+            return new ExpressionNode.FuncArg(arg, name);
+        } else {
+            Node arg = parseExpressionData();
+            return new ExpressionNode.FuncArg(arg, null);
+        }
     }
 
     private List<TokenType.Modifier> parseModifiers() {
@@ -314,6 +336,18 @@ public class Parser {
             modifiers.add((TokenType.Modifier) advance().type());
         }
         return modifiers;
+    }
+
+    private ExpressionNode parseWhile() {
+        //TODO add some checks?
+        boolean doWhile = false;
+        if (peek().type() == TokenType.Modifier.DO) {
+            doWhile = true;
+            advance();
+        }
+        Node condition = parseExpressionData();
+        Node expression = parseMultiExpr();
+        return new ExpressionNode.WhileLoopExpr(condition, expression, doWhile);
     }
 
     private Token advance() {
@@ -370,6 +404,15 @@ public class Parser {
         return peek().type() == type;
     }
 
+    private boolean containsModifier(List<TokenType.Modifier> modList, TokenType.Modifier... mods) {
+        for (int i = 0; i < mods.length; ++i) {
+            if (modList.contains(mods[i])) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     private boolean haveNext() {
         return peek().type() != TokenType.Lexical.EOF;
     }
@@ -383,7 +426,11 @@ public class Parser {
     }
 
     private Token previous() {
-        return tokens.get(current - 1);
+        return tokens.get(Math.max(0, current - 1));
+    }
+
+    private Token previousN(int n) {
+        return tokens.get(Math.max(0, current - n));
     }
 
     private void printRemainingTokens() {

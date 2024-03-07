@@ -1,4 +1,4 @@
-package Evaluation;
+package evaluation;
 
 import parse.node.EvalResult;
 import parse.node.LiteralNode;
@@ -11,33 +11,33 @@ import java.util.function.Function;
 import static parse.node.ResultType.*;
 
 
-public class OperationVisitor {
+public class OperationEval {
 
     public static Map<Class<? extends OperationNode>, Function<EvalResult[], LiteralNode>> operationMap = new HashMap<>(22);
 
     static {
-        operationMap.put(OperationNode.AddOp.class, OperationVisitor::addOperation);
-        operationMap.put(OperationNode.SubtractOp.class, OperationVisitor::subtractOperation);
-        operationMap.put(OperationNode.MultiplyOp.class, OperationVisitor::multiplyOperation);
-        operationMap.put(OperationNode.DivideOp.class, OperationVisitor::divideOperation);
-        operationMap.put(OperationNode.ModuloOp.class, OperationVisitor::moduloOperation);
-        operationMap.put(OperationNode.ExponentiateOp.class, OperationVisitor::exponentiateOperation);
-        operationMap.put(OperationNode.IncOp.class, OperationVisitor::incrementOperation);
-        operationMap.put(OperationNode.DecOp.class, OperationVisitor::decrementOperation);
-        operationMap.put(OperationNode.AndOp.class, OperationVisitor::andOperation);
-        operationMap.put(OperationNode.OrOp.class, OperationVisitor::orOperation);
-        operationMap.put(OperationNode.NorOp.class, OperationVisitor::norOperation);
-        operationMap.put(OperationNode.XorOp.class, OperationVisitor::xOrOperation);
-        operationMap.put(OperationNode.XNorOp.class, OperationVisitor::xNorOperation);
-        operationMap.put(OperationNode.NandOp.class, OperationVisitor::nandOperation);
-        operationMap.put(OperationNode.NegateOp.class, OperationVisitor::negate);
-        operationMap.put(OperationNode.GreaterThanOp.class, OperationVisitor::greaterThan);
-        operationMap.put(OperationNode.GreaterThanEqualOp.class, OperationVisitor::greaterThanEqual);
-        operationMap.put(OperationNode.LessThanOp.class, OperationVisitor::lessThan);
-        operationMap.put(OperationNode.LessThanEqualOp.class, OperationVisitor::lessThanEqual);
-        operationMap.put(OperationNode.EqualityOp.class, OperationVisitor::equals);
-        operationMap.put(OperationNode.RefEqualityOp.class, OperationVisitor::refEquality);
-        operationMap.put(OperationNode.RefNonEqualityOp.class, OperationVisitor::nonRefEquality);
+        operationMap.put(OperationNode.AddOp.class, OperationEval::addOperation);
+        operationMap.put(OperationNode.SubtractOp.class, OperationEval::subtractOperation);
+        operationMap.put(OperationNode.MultiplyOp.class, OperationEval::multiplyOperation);
+        operationMap.put(OperationNode.DivideOp.class, OperationEval::divideOperation);
+        operationMap.put(OperationNode.ModuloOp.class, OperationEval::moduloOperation);
+        operationMap.put(OperationNode.ExponentiateOp.class, OperationEval::exponentiateOperation);
+        operationMap.put(OperationNode.IncOp.class, OperationEval::incrementOperation);
+        operationMap.put(OperationNode.DecOp.class, OperationEval::decrementOperation);
+        operationMap.put(OperationNode.AndOp.class, OperationEval::andOperation);
+        operationMap.put(OperationNode.OrOp.class, OperationEval::orOperation);
+        operationMap.put(OperationNode.NorOp.class, OperationEval::norOperation);
+        operationMap.put(OperationNode.XorOp.class, OperationEval::xOrOperation);
+        operationMap.put(OperationNode.XNorOp.class, OperationEval::xNorOperation);
+        operationMap.put(OperationNode.NandOp.class, OperationEval::nandOperation);
+        operationMap.put(OperationNode.NegateOp.class, OperationEval::negate);
+        operationMap.put(OperationNode.GreaterThanOp.class, OperationEval::greaterThan);
+        operationMap.put(OperationNode.GreaterThanEqualOp.class, OperationEval::greaterThanEqual);
+        operationMap.put(OperationNode.LessThanOp.class, OperationEval::lessThan);
+        operationMap.put(OperationNode.LessThanEqualOp.class, OperationEval::lessThanEqual);
+        operationMap.put(OperationNode.EqualityOp.class, OperationEval::equals);
+        operationMap.put(OperationNode.RefEqualityOp.class, OperationEval::refEquality);
+        operationMap.put(OperationNode.RefNonEqualityOp.class, OperationEval::nonRefEquality);
     }
 
     // TODO add string concatenation and removal?
@@ -138,7 +138,6 @@ public class OperationVisitor {
 
     public static LiteralNode multiplyOperation(EvalResult[] operands) {
         ResultType rType = getReturnType(operands);
-        System.out.println("ReturnType:" + rType);
         if (rType == INT) {
             int result = 0;
             for (int i = 0; i < operands.length; ++i) {

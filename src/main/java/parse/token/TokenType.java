@@ -77,7 +77,6 @@ public sealed interface TokenType {
         PLUS_PLUS("++"),
         MINUS_MINUS("--"),
 
-
         // Comparison
         GREATER(">"),
         LESS("<"),
@@ -89,9 +88,8 @@ public sealed interface TokenType {
         BANG_EQUAL("!="),
         REF_EQUALS("==");
 
-
-
         public final String stringValue;
+
         Operation(String stringValue) { this.stringValue = stringValue; }
 
         @Override
@@ -99,9 +97,6 @@ public sealed interface TokenType {
             return stringValue;
         }
     }
-
-
-
 
     enum Literal implements TokenType {
         TRUE("#t"),
@@ -183,9 +178,12 @@ public sealed interface TokenType {
         STATIC_ALL("&stat-all"),
         SYNCHRONIZED("&sync"),
         SYNCHRONIZED_ALL("&sync-all"),
+        DYNAMIC("&dyn"),
+        DYNAMIC_ALL("&dyn-all"),
         CLOSURE_CLONE("&clos-clone"),
         OPTIONAL("&opt"),
-        REST("&rest");
+        REST("&rest"),
+        DO("&do");
 
         public final String stringValue;
 

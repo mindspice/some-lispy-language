@@ -5,13 +5,20 @@ package parse.node;
 import java.util.List;
 
 
-public sealed interface LiteralNode extends Node {
+public sealed interface LiteralNode extends Node, EvalResult {
+    BooleanLit TRUE = new BooleanLit(true);
+    BooleanLit FALSE = new BooleanLit(false);
+    NullLit NULL = new NullLit();
+    VoidLit VOID = new VoidLit();
 
     record IntLit(int value) implements LiteralNode, EvalResult {
 
         public boolean asBoolean() { return value != 0; }
 
         public String asString() { return String.valueOf(value); }
+
+        @Override
+        public String toString() { return String.valueOf(value); }
 
         public int asInt() { return value; }
 
@@ -53,6 +60,9 @@ public sealed interface LiteralNode extends Node {
 
         public String asString() { return String.valueOf(value); }
 
+        @Override
+        public String toString() { return String.valueOf(value); }
+
         public int asInt() { return (int) value; }
 
         public long asLong() { return (long) value; }
@@ -93,6 +103,9 @@ public sealed interface LiteralNode extends Node {
 
         public String asString() { return String.valueOf(value); }
 
+        @Override
+        public String toString() { return String.valueOf(value); }
+
         public int asInt() { return (int) value; }
 
         public long asLong() { return value; }
@@ -131,6 +144,9 @@ public sealed interface LiteralNode extends Node {
         public boolean asBoolean() { return value != 0; }
 
         public String asString() { return String.valueOf(value); }
+
+        @Override
+        public String toString() { return String.valueOf(value); }
 
         public int asInt() { return (int) value; }
 
@@ -180,6 +196,9 @@ public sealed interface LiteralNode extends Node {
 
         public String asString() { return value; }
 
+        @Override
+        public String toString() { return value; }
+
         public Object asObject() { return value; }
 
         public Node asNode() { return this; }
@@ -213,6 +232,9 @@ public sealed interface LiteralNode extends Node {
 
         public String asString() { return value; }
 
+        @Override
+        public String toString() { return value; }
+
         public Object asObject() { return value; }
 
         public Node asNode() { return this; }
@@ -236,7 +258,10 @@ public sealed interface LiteralNode extends Node {
 
         public boolean asBoolean() { return value; }
 
-        public String asString() { return String.valueOf(value); }
+        public String asString() { return value ? "#t" : "#f"; }
+
+        @Override
+        public String toString() { return value ? "#t" : "#f"; }
 
         public int asInt() { return value ? 1 : 0; }
 
@@ -277,7 +302,7 @@ public sealed interface LiteralNode extends Node {
 
         public boolean asBoolean() { return value != null; }
 
-        public String asString() { return String.valueOf(value); }
+        public String asString() { return toString(); }
 
         public Object asObject() { return value; }
 
@@ -306,7 +331,10 @@ public sealed interface LiteralNode extends Node {
 
         public boolean asBoolean() { return false; }
 
-        public String asString() { return null; }
+        public String asString() { return "#null"; }
+
+        @Override
+        public String toString() { return "#null"; }
 
         public Object asObject() { return null; }
 
@@ -321,7 +349,38 @@ public sealed interface LiteralNode extends Node {
         public boolean isRefEqualTo(EvalResult other) {
             return other.asObject() == null;
         }
+    }
 
+    record VoidLit() implements LiteralNode, EvalResult {
+
+        public int asInt() { return 0; }
+
+        public long asLong() { return 0; }
+
+        public float asFloat() { return 0; }
+
+        public double asDouble() { return 0; }
+
+        public boolean asBoolean() { return false; }
+
+        public String asString() { return "#void"; }
+
+        @Override
+        public String toString() { return ""; }
+
+        public Object asObject() { return this; }
+
+        public Node asNode() { return this; }
+
+        public ResultType resultType() { return ResultType.VOID; }
+
+        public List<Object> asList() { return List.of(); }
+
+        public String langType() { return "void"; }
+
+        public boolean isRefEqualTo(EvalResult other) {
+            return other.asObject() == this;
+        }
     }
 
     record ListLit<T>(List<T> value) implements LiteralNode, EvalResult {
@@ -338,6 +397,8 @@ public sealed interface LiteralNode extends Node {
 
         public String asString() { return value.toString(); }
 
+        public String toString() { return value.toString(); }
+
         public Object asObject() { return value; }
 
         public Node asNode() { return this; }
@@ -351,6 +412,36 @@ public sealed interface LiteralNode extends Node {
         public boolean isRefEqualTo(EvalResult other) {
             return other.asObject() == value;
         }
+    }
+
+    record LambdaLit(DefinitionNode.LambdaDef value) implements LiteralNode, EvalResult {
+
+        public int asInt() { return 1; }
+
+        public long asLong() { return 1; }
+
+        public float asFloat() { return 1; }
+
+        public double asDouble() { return 1; }
+
+        public boolean asBoolean() { return true; }
+
+        public String asString() { return value.toString(); }
+
+        public String toString() { return value.toString(); }
+
+        public Node asNode() { return value; }
+
+        public List<?> asList() { return List.of(value); }
+
+        public Object asObject() { return value; }
+
+        public ResultType resultType() { return ResultType.LAMBDA; }
+
+        public String langType() { return "lambda<" + value.returnType() + ">"; }
+
+        public boolean isRefEqualTo(EvalResult other) {
+            return other.asObject() == value; }
     }
 
 }

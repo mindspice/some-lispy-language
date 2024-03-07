@@ -7,11 +7,13 @@ public enum ResultType {
     DOUBLE(SubResultType.NUMBER),
     STRING(SubResultType.STRING),
     BOOLEAN(SubResultType.BOOLEAN),
+    LAMBDA(SubResultType.OBJECT),
     OBJECT(SubResultType.OBJECT),
     QUOTE(SubResultType.STRING),
     NULL(SubResultType.OBJECT),
     LIST(SubResultType.OBJECT),
-    NODE(SubResultType.OBJECT);
+    NODE(SubResultType.OBJECT),
+    VOID(SubResultType.OBJECT);
 
     public final SubResultType subType;
 
@@ -22,5 +24,7 @@ public enum ResultType {
         STRING,
         OBJECT,
         BOOLEAN,
+        VOID,
+        LAMBDA;
     }
 }

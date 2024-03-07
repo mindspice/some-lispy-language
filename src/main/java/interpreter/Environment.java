@@ -1,6 +1,7 @@
 package interpreter;
 
 import interpreter.data.Binding;
+import parse.node.LiteralNode;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -8,7 +9,7 @@ import java.util.Map;
 
 public class Environment {
     final Environment parentEnv;
-    private Map<String, Binding> bindings = new HashMap<>(50);
+    private final Map<String, Binding> bindings = new HashMap<>();
 
     public Environment() {
         parentEnv = null;
@@ -23,9 +24,22 @@ public class Environment {
         if (existing == null) {
             bindings.put(name, binding);
         } else {
-            binding.reAssign(binding.type(), binding.value());
+           throw new IllegalStateException("Redefinition of existing binding");
         }
         return binding.value();
+    }
+
+    public boolean hasBinding(String name) {
+        return bindings.containsKey(name);
+    }
+
+    public LiteralNode reassignBinding(String name, LiteralNode value){
+        Binding existing = bindings.get(name);
+        if (existing == null) {
+            throw new IllegalStateException("Attempted to reassign to non-existing our out of scope binding");
+        }
+        existing.reAssign(value);
+        return value;
     }
 
     private Binding lookupBinding(String name) {
@@ -36,18 +50,18 @@ public class Environment {
         return existing;
     }
 
-    public Object getBinding(String name) {
+    public LiteralNode getBinding(String name) {
         Binding existing = lookupBinding(name);
         if (existing == null) {
-            throw new IllegalStateException("Undefined value");
+            throw new IllegalStateException("Undefined symbol");
         }
         return existing.value();
     }
 
-    public Object getBinding(String name, String expectedType) {
+    public LiteralNode getBinding(String name, String expectedType) {
         Binding existing = lookupBinding(name);
         if (existing == null) {
-            throw new IllegalStateException("Undefined value");
+            throw new IllegalStateException("Undefined symbol");
         }
         if (!existing.type().equals(expectedType)) {
             throw new IllegalStateException(

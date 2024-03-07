@@ -27,6 +27,7 @@ public interface EvalResult {
 
     String langType();
 
+
     boolean isRefEqualTo(EvalResult other);
 
     record NodeResult(Node value) implements EvalResult {

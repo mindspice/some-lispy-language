@@ -172,6 +172,11 @@ public class Lexer {
 
     public void lexNumber() {
         char litType = '\0';
+        boolean isNeg = false;
+        if (tokens.getLast().type() == TokenType.Operation.MINUS) {
+            tokens.removeLast();
+            isNeg = true;
+        }
 
         if (peekOne() == '.') {
             advance();
@@ -207,12 +212,19 @@ public class Lexer {
         }
 
         switch (litType) {
-            case 'd' -> addToken(TokenType.Literal.DOUBLE, Double.parseDouble(source.substring(startIndex, currIndex)));
-            case 'f' -> addToken(TokenType.Literal.FLOAT, Float.parseFloat(source.substring(startIndex, currIndex)));
-            case 'l' -> addToken(TokenType.Literal.LONG, Long.parseLong(source.substring(startIndex, currIndex)));
+            case 'd' -> addToken(TokenType.Literal.DOUBLE,
+                    isNeg ? -Double.parseDouble(source.substring(startIndex, currIndex))
+                          : Double.parseDouble(source.substring(startIndex, currIndex)));
+            case 'f' -> addToken(TokenType.Literal.FLOAT,
+                    isNeg ? -Float.parseFloat(source.substring(startIndex, currIndex))
+                          : Float.parseFloat(source.substring(startIndex, currIndex)));
+            case 'l' -> addToken(TokenType.Literal.LONG,
+                    isNeg ? -Long.parseLong(source.substring(startIndex, currIndex))
+                          : Long.parseLong(source.substring(startIndex, currIndex)));
             default -> {
-                long value = Long.parseLong(source.substring(startIndex, currIndex));
-                if (value < Integer.MAX_VALUE) {
+                long value = isNeg ? -Long.parseLong(source.substring(startIndex, currIndex))
+                                   : Long.parseLong(source.substring(startIndex, currIndex));
+                if (value < Integer.MAX_VALUE && value > Integer.MIN_VALUE) {
                     addToken(TokenType.Literal.INT, (int) value);
                 } else {
                     addToken(TokenType.Literal.LONG, value);
