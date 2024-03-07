@@ -5,6 +5,7 @@ import parse.token.Token;
 import parse.token.TokenType;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.function.Function;
 
@@ -78,7 +79,7 @@ public class Parser {
 
             if (peekN(2).type() == TokenType.Definition.LAMBDA) {
                 consumeLParen("Expected start of s-expr, found " + peek().type());
-                LiteralNode.LambdaLit lambda = parseLambda();
+                DefinitionNode.LambdaDef lambda = parseLambda();
                 definitionNode = new DefinitionNode.FunctionDef(name, lambda);
                 consumeRParen("Expected end of s-expr, found: " + peek().type());
 
@@ -99,7 +100,7 @@ public class Parser {
         return definitionNode;
     }
 
-    private LiteralNode.LambdaLit parseLambda() {
+    private DefinitionNode.LambdaDef parseLambda() {
         consume(TokenType.Definition.LAMBDA, "Expected lambda, found:" + peek().type());
         List<TokenType.Modifier> modifiers = match(TokenType.Modifier.values()) ? parseModifiers() : null;
 
@@ -112,7 +113,7 @@ public class Parser {
 
         String returnType = (peek().type() == TokenType.Syntactic.TYPE) ? advance().lexeme() : null;
 
-        return new LiteralNode.LambdaLit(new DefinitionNode.LambdaDef(modifiers, parameters, body, returnType));
+        return  new DefinitionNode.LambdaDef(modifiers, parameters, body, returnType);
     }
 
     private List<DefinitionNode.ParamDef> parseParameters() {
@@ -167,8 +168,8 @@ public class Parser {
             case TokenType.Expression expression -> parseExactExpression(expression);
             case TokenType.Operation operation -> parseOperation(operation);
             case TokenType.Literal literal -> parseLiteral();
+            default ->  throw onError.apply("Unexpected syntax in expression: " + peek().type());
 
-            default -> throw onError.apply("Unexpected syntax in expression: " + peek().type());
         };
 
     }
@@ -310,7 +311,7 @@ public class Parser {
                 if (atOpt && !funcArg.isNamed()) {
                     throw onError.apply("All arguments following first named argument must be also named");
                 }
-                args.add(parseFuncArgument());
+                args.add(funcArg);
             }
             return new ExpressionNode.FunctionCall(identifier, args);
         } else {
@@ -326,6 +327,7 @@ public class Parser {
             return new ExpressionNode.FuncArg(arg, name);
         } else {
             Node arg = parseExpressionData();
+            System.out.println("arggg: " + arg);
             return new ExpressionNode.FuncArg(arg, null);
         }
     }

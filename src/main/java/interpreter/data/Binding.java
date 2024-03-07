@@ -33,11 +33,12 @@ public class Binding {
         return new Binding(value.langType(), value, false, false);
     }
 
-    public void reAssign(LiteralNode value) {
+    public LiteralNode reAssign(LiteralNode value) {
         if (!mutable) { throw new IllegalStateException("Reassignment of final value"); }
         if (!dynamic && !type.equals(value.langType())) { throw new IllegalStateException("Type mismatch"); }
-        this.type = type;
+        this.type = value.langType();
         this.value = value;
+        return value;
     }
 
     public String type() {

@@ -1,6 +1,7 @@
 package parse.node;
 
 import interpreter.Environment;
+import interpreter.ScopeEnv;
 import interpreter.Interpreter;
 import interpreter.data.Binding;
 
@@ -35,9 +36,7 @@ public sealed interface ExpressionNode extends Node {
 
     record FunctionCall(String name, List<FuncArg> arguments) implements ExpressionNode {
         // TODO FIXME this needs to be more streamlined and efficient
-        public Environment getEnvironment(Interpreter interpreter, Environment currEnvironment) {
-            var funcEnv = new Environment(currEnvironment);
-            var lambda = (DefinitionNode.LambdaDef) currEnvironment.getBinding(name).asObject();
+        public Environment bindParameters(Interpreter interpreter, DefinitionNode.LambdaDef lambda, Environment env) {
             if (arguments.size() < lambda.minArity() || arguments.size() > lambda.maxArity()) {
                 throw new IllegalStateException(String.format("Argument count mismatch. Passed: %d, Min: %d, Max: %d",
                         arguments.size(), lambda.minArity(), lambda.maxArity())
@@ -47,7 +46,7 @@ public sealed interface ExpressionNode extends Node {
                 var arg = arguments.get(i);
                 var param = lambda.parameters().get(i);
                 var evaledArg = (LiteralNode) interpreter.evalNode(arg.value);
-                funcEnv.createBinding(
+                env.createBinding(
                         arg.isNamed() ? arg.name() : param.name(),
                         new Binding(evaledArg.langType(), evaledArg, param.dynamic(), param.mutable())
                 );
@@ -55,11 +54,11 @@ public sealed interface ExpressionNode extends Node {
             for (int i = 0; i < lambda.parameters().size(); ++i) {
                 var param = lambda.parameters().get(i);
                 if (param.isOptional()) { break; }
-                if (!funcEnv.hasBinding(param.name())) {
+                if (!env.hasBinding(param.name())) {
                     throw new IllegalStateException("Required parameter needed for function call");
                 }
             }
-            return funcEnv;
+            return env;
         }
     }
 

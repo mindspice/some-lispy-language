@@ -14,12 +14,12 @@ import java.util.function.Function;
 public class Interpreter {
     private final Lexer lexer = new Lexer();
     private final Parser parser = new Parser();
-    private final Environment globalEnvironment = new Environment(null);
+    private final ScopeContext env = new ScopeContext();
 
     public String eval(String input) {
         var t = System.nanoTime();
         var tokens = lexer.process(input);
-
+        tokens.forEach(tk -> System.out.print(tk.type() + ","));
         var ast = parser.process(tokens);
         System.out.println(ast);
         evalProgram(ast);
@@ -66,7 +66,7 @@ public class Interpreter {
             case ExpressionNode.AssignOp assignOp -> evalAssignment(assignOp);
             case ExpressionNode.CondExpr condExpr -> evalCondExpr(condExpr);
             case ExpressionNode.ConsExpr consExpr -> null;
-            case ExpressionNode.FunctionCall functionCall -> null;
+            case ExpressionNode.FunctionCall functionCall -> evalFunctionCall(functionCall);
             case ExpressionNode.IfExpr ifExpr -> evalIfExpr(ifExpr);
             case ExpressionNode.MultiExpr multiExpr -> evalMultiExpression(multiExpr);
             case ExpressionNode.PrintExpr printExpr -> evalPrintExpression(printExpr);
@@ -76,11 +76,21 @@ public class Interpreter {
     }
 
     Node evalFunctionCall(ExpressionNode.FunctionCall functionCall) {
-        return null;
+        LiteralNode literal = env.getScope().getBinding(functionCall.name());
+        if(literal instanceof LiteralNode.LambdaLit lambda){
+            try {
+                env.pushClosureScope(lambda.env());
+                functionCall.bindParameters(this, lambda.value(), env.getScope());
+                return evalNode(lambda.value().body());
+            } finally {
+                env.popScope();
+            }
+        }
+        throw new IllegalStateException("Attempted to call non lambda bound symbol as function");
     }
 
     Node evalLiteralCall(ExpressionNode.LiteralCall literalCall) {
-        return globalEnvironment.getBinding(literalCall.name());
+        return env.getScope().getBinding(literalCall.name());
     }
 
     Node evalPrintExpression(ExpressionNode.PrintExpr printExpr) {
@@ -99,7 +109,7 @@ public class Interpreter {
     Node evalAssignment(ExpressionNode.AssignOp assignment) {
         LiteralNode evaledNode =  (LiteralNode) evalNode(assignment.value());
         if (evaledNode instanceof LiteralNode literalNode) {
-            globalEnvironment.reassignBinding(assignment.name(), literalNode);
+            env.getScope().reassignBinding(assignment.name(), literalNode);
             return evaledNode;
         }
         throw new IllegalStateException("Invalid assignment, Expected lambda or literal found: " + evaledNode);
@@ -112,11 +122,11 @@ public class Interpreter {
                 // TODO: check that expression that evals to a lambda properly assigns
                 if (evaledNode instanceof LiteralNode result) {
                     if (containsModifier(varDef.modifiers(), TokenType.Modifier.DYNAMIC, TokenType.Modifier.DYNAMIC_ALL)) {
-                        globalEnvironment.createBinding(varDef.name(), Binding.ofDynamic(result));
+                        env.getScope().createBinding(varDef.name(), Binding.ofDynamic(result));
                     } else if (containsModifier(varDef.modifiers(), TokenType.Modifier.MUTABLE, TokenType.Modifier.MUTABLE_ALL)) {
-                        globalEnvironment.createBinding(varDef.name(), Binding.ofMutable(result));
+                        env.getScope().createBinding(varDef.name(), Binding.ofMutable(result));
                     } else {
-                        globalEnvironment.createBinding(varDef.name(), Binding.ofFinal(result));
+                        env.getScope().createBinding(varDef.name(), Binding.ofFinal(result));
                     }
                     yield evaledNode;
                 } else {
@@ -124,12 +134,13 @@ public class Interpreter {
                 }
             }
             case DefinitionNode.FunctionDef func -> {
-                if (containsModifier(func.lambda().value().modifiers(), TokenType.Modifier.DYNAMIC, TokenType.Modifier.DYNAMIC_ALL)) {
-                    globalEnvironment.createBinding(func.name(), Binding.ofDynamic(func.lambda()));
-                } else if (containsModifier(func.lambda().value().modifiers(), TokenType.Modifier.MUTABLE, TokenType.Modifier.MUTABLE_ALL)) {
-                    globalEnvironment.createBinding(func.name(), Binding.ofMutable(func.lambda()));
+                LiteralNode.LambdaLit lambdaLit = new LiteralNode.LambdaLit(func.lambda(), env.getScope());
+                if (containsModifier(func.lambda().modifiers(), TokenType.Modifier.DYNAMIC, TokenType.Modifier.DYNAMIC_ALL)) {
+                    env.getScope().createBinding(func.name(), Binding.ofDynamic(lambdaLit));
+                } else if (containsModifier(func.lambda().modifiers(), TokenType.Modifier.MUTABLE, TokenType.Modifier.MUTABLE_ALL)) {
+                    env.getScope().createBinding(func.name(), Binding.ofMutable(lambdaLit));
                 } else {
-                    globalEnvironment.createBinding(func.name(), Binding.ofFinal(func.lambda()));
+                    env.getScope().createBinding(func.name(), Binding.ofFinal(lambdaLit));
                 }
                 yield func.lambda();
             }

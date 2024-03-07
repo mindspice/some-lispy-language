@@ -7,10 +7,10 @@ import java.util.List;
 
 public sealed interface DefinitionNode extends Node {
 
-    record FunctionDef(String name, LiteralNode.LambdaLit lambda) implements DefinitionNode {
+    record FunctionDef(String name, LambdaDef lambda) implements DefinitionNode {
         public FunctionDef(String name, List<TokenType.Modifier> modifiers, List<ParamDef> parameters,
                 Node body, String returnType) {
-            this(name, new LiteralNode.LambdaLit(new LambdaDef(modifiers, parameters, body, returnType)));
+            this(name, new LambdaDef(modifiers, parameters, body, returnType));
         }
     }
 

@@ -2,6 +2,9 @@ package parse.node;
 
 // TODO should add bytes and char, etc to parser also should add bignums
 
+import interpreter.Environment;
+import interpreter.ScopeEnv;
+
 import java.util.List;
 
 
@@ -414,7 +417,7 @@ public sealed interface LiteralNode extends Node, EvalResult {
         }
     }
 
-    record LambdaLit(DefinitionNode.LambdaDef value) implements LiteralNode, EvalResult {
+    record LambdaLit(DefinitionNode.LambdaDef value, Environment env) implements LiteralNode, EvalResult {
 
         public int asInt() { return 1; }
 
