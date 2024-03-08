@@ -28,8 +28,9 @@ public class ScopeContext {
         return currEnv;
     }
 
-    public void swapScope(ScopeEnv scopeEnv) {
 
+    public String toString() {
+        return currEnv.toString();
     }
 
 }

@@ -315,22 +315,22 @@ public class OperationEval {
         if (rType == INT) {
             List<Integer> list = new ArrayList<>(operands.length);
             for (int i = 0; i < operands.length; ++i) { list.add(operands[i].asInt() + 1); }
-            return new LiteralNode.ListLit<>(list);
+            return new LiteralNode.AListLit<>(list);
         }
         if (rType == DOUBLE) {
             List<Double> list = new ArrayList<>(operands.length);
             for (int i = 0; i < operands.length; ++i) { list.add(operands[i].asDouble() + 1); }
-            return new LiteralNode.ListLit<>(list);
+            return new LiteralNode.AListLit<>(list);
         }
         if (rType == LONG) {
             List<Long> list = new ArrayList<>(operands.length);
             for (int i = 0; i < operands.length; ++i) { list.add(operands[i].asLong() + 1); }
-            return new LiteralNode.ListLit<>(list);
+            return new LiteralNode.AListLit<>(list);
         }
         if (rType == FLOAT) {
             List<Float> list = new ArrayList<>(operands.length);
             for (int i = 0; i < operands.length; ++i) { list.add(operands[i].asFloat() + 1); }
-            return new LiteralNode.ListLit<>(list);
+            return new LiteralNode.AListLit<>(list);
         }
         throw new RuntimeException("Non-numerical literal in arithmetic operation");
     }
@@ -342,28 +342,28 @@ public class OperationEval {
             for (int i = 0; i < operands.length; ++i) { list.add(operands[i].asInt() - 1); }
             return list.size() == 1
                    ? new LiteralNode.IntLit(list.getFirst())
-                   : new LiteralNode.ListLit<>(Collections.unmodifiableList(list));
+                   : new LiteralNode.AListLit<>(Collections.unmodifiableList(list));
         }
         if (rType == DOUBLE) {
             List<Double> list = new ArrayList<>(operands.length);
             for (int i = 0; i < operands.length; ++i) { list.add(operands[i].asDouble() - 1); }
             return list.size() == 1
                    ? new LiteralNode.DoubleLit(list.getFirst())
-                   : new LiteralNode.ListLit<>(Collections.unmodifiableList(list));
+                   : new LiteralNode.AListLit<>(Collections.unmodifiableList(list));
         }
         if (rType == LONG) {
             List<Long> list = new ArrayList<>(operands.length);
             for (int i = 0; i < operands.length; ++i) { list.add(operands[i].asLong() - 1); }
             return list.size() == 1
                    ? new LiteralNode.LongLit(list.getFirst())
-                   : new LiteralNode.ListLit<>(Collections.unmodifiableList(list));
+                   : new LiteralNode.AListLit<>(Collections.unmodifiableList(list));
         }
         if (rType == FLOAT) {
             List<Float> list = new ArrayList<>(operands.length);
             for (int i = 0; i < operands.length; ++i) { list.add(operands[i].asFloat() - 1); }
             return list.size() == 1
                    ? new LiteralNode.FloatLit(list.getFirst())
-                   : new LiteralNode.ListLit<>(Collections.unmodifiableList(list));
+                   : new LiteralNode.AListLit<>(Collections.unmodifiableList(list));
         }
         throw new RuntimeException("Non-numerical literal in arithmetic operation");
     }

@@ -81,5 +81,21 @@ public class LexTest {
         var tokens = new Lexer().process(lex);
         tokens.forEach(t -> System.out.println(t.type() + " | " + t.literal()));
     }
+//
+//    @Test
+//    public void testQuote() {
+//        var lex = "`testStringQUote";
+//        var tokens = new Lexer().process(lex);
+//        System.out.println(tokens);
+//        assertEquals(TokenType.Literal.QUOTED, tokens.get(0).type());
+//        assertEquals(lex.substring(1), tokens.get(0).literal());
+//
+//        lex = "`((nest)(list)(test))";
+//        tokens = new Lexer().process(lex);
+//        System.out.println(tokens);
+//        assertEquals(TokenType.Literal.QUOTED, tokens.get(0).type());
+//        assertEquals(lex.substring(1), tokens.get(0).literal());
+//
+//    }
 
 }

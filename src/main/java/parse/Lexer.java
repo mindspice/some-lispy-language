@@ -106,10 +106,8 @@ public class Lexer {
 
         switch (singleToken) { //TODO add comments
             case TokenType.Syntactic.AMPERSAND -> lexModifier();
-            case TokenType.Lexical.QUOTE -> {
-                lexString();
-                return true;
-            }
+            case TokenType.Lexical.QUOTE ->  lexString();
+          //  case TokenType.Syntactic.GRAVE -> lexQuote();
             default -> addToken(singleToken);
         }
         return true;
@@ -170,6 +168,24 @@ public class Lexer {
         addToken(TokenType.Literal.STRING, value);
     }
 
+//    private void lexQuote() {
+//        if (peekOne() == '(') {
+//            int depth = 1;
+//            advance(); // skip known paren
+//            while(depth != 0 && haveNext()) {
+//                if (peekOne() == '(') { ++depth; }
+//                if (peekOne() == ')') { --depth; }
+//                advance();
+//            }
+//        } else {
+//            while(isAlphaNumeric(peekOne()) && haveNext()) {
+//                advance();
+//            }
+//        }
+//        String quoted = source.substring(startIndex +1, currIndex); // skip `
+//        addToken(TokenType.Literal.QUOTED, quoted);
+//    }
+
     public void lexNumber() {
         char litType = '\0';
         boolean isNeg = false;
@@ -184,9 +200,7 @@ public class Lexer {
         }
 
         while (isNumeric(peekOne())) {
-            System.out.println(peekOne());
             advance();
-
             if (peekOne() == '.' && isNumeric(peekTwo())) {
                 advance();
                 litType = 'd';
@@ -275,7 +289,7 @@ public class Lexer {
     }
 
     private boolean isDefEnd(char c) {
-        return c == ' ' || c == '\r' || c == '\n' || c == '\t' || c == ')';
+        return c == ' ' || c == '\r' || c == '\n' || c == '\t' || c == ')' || c == '(';
     }
 
     private boolean isAlphaNumeric(char c) {

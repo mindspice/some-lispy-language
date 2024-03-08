@@ -3,7 +3,7 @@ package language.types.data;
 import java.util.Map;
 
 
-public record Pair<U, V>(U first, V second) {
+public record Pair<U, V>(U car, V cdr) {
 
     public static <U, V> Pair<U, V> of(U obj1, V obj2) {
         return new Pair<>(obj1, obj2);

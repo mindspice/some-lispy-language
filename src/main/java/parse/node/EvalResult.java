@@ -19,7 +19,7 @@ public interface EvalResult {
 
     Node asNode();
 
-    List<?> asList();
+    List<?> asAList();
 
     Object asObject();
 
@@ -51,7 +51,7 @@ public interface EvalResult {
 
         public String langType() { return value().getClass().getTypeName(); }
 
-        public List<Node> asList() { return List.of(value); }
+        public List<Node> asAList() { return List.of(value); }
 
         public boolean isRefEqualTo(EvalResult other) {
             return value == other.asNode();

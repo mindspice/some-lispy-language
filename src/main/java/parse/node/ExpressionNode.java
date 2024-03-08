@@ -34,6 +34,8 @@ public sealed interface ExpressionNode extends Node {
 
     record ConsExpr(Node car, Node cdr) implements ExpressionNode { }
 
+    record ListAccess(String pattern, Node list) implements ExpressionNode { }
+
     record FunctionCall(String name, List<FuncArg> arguments) implements ExpressionNode {
         // TODO FIXME this needs to be more streamlined and efficient
         public Environment bindParameters(Interpreter interpreter, DefinitionNode.LambdaDef lambda, Environment env) {

@@ -29,7 +29,8 @@ public class ScopeEnv implements Environment {
         if (existing == null) {
             bindings.put(name, binding);
         } else {
-            throw new IllegalStateException("Redefinition of existing binding");
+          //  System.out.println(this);
+            throw new IllegalStateException("Redefinition of existing binding: " + name);
         }
         return binding.value();
     }
@@ -53,7 +54,8 @@ public class ScopeEnv implements Environment {
             existing = parentEnv.lookupBinding(name);
         }
         if (existing == null) {
-            throw new IllegalStateException("Undefined symbol");
+          //  System.out.println(this);
+            throw new IllegalStateException("Undefined symbol: " + name);
         }
         existing.reAssign(value);
         return value;
@@ -67,7 +69,8 @@ public class ScopeEnv implements Environment {
         }
 
         if (existing == null) {
-            throw new IllegalStateException("Undefined symbol");
+          //  System.out.println(this);
+            throw new IllegalStateException("Undefined symbol: " + name);
         }
         return existing;
     }
@@ -79,7 +82,7 @@ public class ScopeEnv implements Environment {
             existing = parentEnv.lookupBinding(name);
         }
         if (existing == null) {
-            throw new IllegalStateException("Undefined symbol");
+            throw new IllegalStateException("Undefined symbol: " + name);
         }
         return existing.value();
     }
@@ -91,7 +94,8 @@ public class ScopeEnv implements Environment {
             existing = parentEnv.lookupBinding(name);
         }
         if (existing == null) {
-            throw new IllegalStateException("Undefined symbol");
+         //   System.out.println(this);
+            throw new IllegalStateException("Undefined symbol: " + name);
         }
         if (!existing.type().equals(expectedType)) {
             throw new IllegalStateException(
@@ -99,6 +103,12 @@ public class ScopeEnv implements Environment {
             );
         }
         return existing.value();
+    }
+
+    public String toString() {
+        String s = "== Scope Environment==\n" + stringifyMap(bindings);
+        s += parentEnv == null ? "\n Null Parent" : "\n== Parent Environment ==\n"+ parentEnv.toString();
+        return s;
     }
 
 }

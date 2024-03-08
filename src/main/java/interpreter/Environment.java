@@ -3,6 +3,9 @@ package interpreter;
 import interpreter.data.Binding;
 import parse.node.LiteralNode;
 
+import java.util.Map;
+import java.util.stream.Collectors;
+
 
 public interface Environment {
     LiteralNode createBinding(String name, Binding binding);
@@ -19,4 +22,8 @@ public interface Environment {
 
     Environment getParent();
 
+    default String stringifyMap(Map<String, Binding> map) {
+        return map.entrySet().stream().map(e -> String.format("Symbol: %s, Value: %s", e.getKey(), e.getValue().value()))
+                .collect(Collectors.joining("\n"));
+    }
 }

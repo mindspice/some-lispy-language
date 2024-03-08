@@ -65,8 +65,9 @@ public class Interpreter {
         return switch (expressionNode) {
             case ExpressionNode.AssignOp assignOp -> evalAssignment(assignOp);
             case ExpressionNode.CondExpr condExpr -> evalCondExpr(condExpr);
-            case ExpressionNode.ConsExpr consExpr -> null;
+            case ExpressionNode.ConsExpr consExpr -> evalCons(consExpr);
             case ExpressionNode.FunctionCall functionCall -> evalFunctionCall(functionCall);
+            case ExpressionNode.ListAccess listAccess -> evalListAccess(listAccess);
             case ExpressionNode.IfExpr ifExpr -> evalIfExpr(ifExpr);
             case ExpressionNode.MultiExpr multiExpr -> evalMultiExpression(multiExpr);
             case ExpressionNode.PrintExpr printExpr -> evalPrintExpression(printExpr);
@@ -75,9 +76,26 @@ public class Interpreter {
         };
     }
 
+    Node evalCons(ExpressionNode.ConsExpr consExpr) {
+        Node evaledCar = evalNode(consExpr.car());
+        Node evaledCdr = evalNode(consExpr.cdr());
+        return LiteralNode.PairLit.of(evaledCar, evaledCdr);
+    }
+
+    Node evalListAccess(ExpressionNode.ListAccess listAccess) {
+        if (evalNode(listAccess.list()) instanceof LiteralNode.PairLit pair) {
+            Object value = listAccess.pattern().charAt(0) == 'f' ? pair.value().car() : pair.value().cdr();
+            for (int i = 1; i < listAccess.pattern().length(); ++i) {
+                value = listAccess.pattern().charAt(i) == 'f' ? pair.value().car() : pair.value().cdr();
+            }
+            return (LiteralNode) value;
+        }
+        throw new IllegalStateException("Attempted to access non-existent list value");
+    }
+
     Node evalFunctionCall(ExpressionNode.FunctionCall functionCall) {
         LiteralNode literal = env.getScope().getBinding(functionCall.name());
-        if(literal instanceof LiteralNode.LambdaLit lambda){
+        if (literal instanceof LiteralNode.LambdaLit lambda) {
             try {
                 env.pushClosureScope(lambda.env());
                 functionCall.bindParameters(this, lambda.value(), env.getScope());
@@ -86,7 +104,9 @@ public class Interpreter {
                 env.popScope();
             }
         }
-        throw new IllegalStateException("Attempted to call non lambda bound symbol as function");
+        throw new IllegalStateException(
+                String.format("Attempted to call non lambda bound symbol %s as function", functionCall.name())
+        );
     }
 
     Node evalLiteralCall(ExpressionNode.LiteralCall literalCall) {
@@ -107,7 +127,7 @@ public class Interpreter {
     }
 
     Node evalAssignment(ExpressionNode.AssignOp assignment) {
-        LiteralNode evaledNode =  (LiteralNode) evalNode(assignment.value());
+        LiteralNode evaledNode = (LiteralNode) evalNode(assignment.value());
         if (evaledNode instanceof LiteralNode literalNode) {
             env.getScope().reassignBinding(assignment.name(), literalNode);
             return evaledNode;
@@ -165,12 +185,17 @@ public class Interpreter {
     }
 
     Node evalMultiExpression(ExpressionNode.MultiExpr multiExpr) {
-        var exprList = multiExpr.expressions();
-        Node evaledNode = null;
-        for (int i = 0; i < exprList.size(); ++i) {
-            evaledNode = evalNode(exprList.get(i));
+        try {
+            env.pushScope();
+            var exprList = multiExpr.expressions();
+            Node evaledNode = null;
+            for (int i = 0; i < exprList.size(); ++i) {
+                evaledNode = evalNode(exprList.get(i));
+            }
+            return evaledNode;
+        } finally {
+            env.popScope();
         }
-        return evaledNode;
     }
 
     Node evalIfExpr(ExpressionNode.IfExpr ifExpr) {

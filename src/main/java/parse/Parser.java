@@ -46,7 +46,7 @@ public class Parser {
         consumeRParen("Expected closing parenthesis of expression, found: " + peek().type());
 
         if (expression == null) {
-            throw onError.apply("Encountered unexpected syntax while parsing");
+            return LiteralNode.NIL_LIST;
         }
         return expression;
     }
@@ -76,7 +76,6 @@ public class Parser {
         DefinitionNode definitionNode = null;
 
         if (peek().type() == TokenType.Lexical.LEFT_PAREN) {
-
             if (peekN(2).type() == TokenType.Definition.LAMBDA) {
                 consumeLParen("Expected start of s-expr, found " + peek().type());
                 DefinitionNode.LambdaDef lambda = parseLambda();
@@ -88,6 +87,8 @@ public class Parser {
             }
         } else if (match(TokenType.Literal.values())) {
             definitionNode = new DefinitionNode.VariableDef(name, modifiers, varType, parseLiteral());
+        } else if (peek().type() == TokenType.Syntactic.GRAVE) {
+            definitionNode = new DefinitionNode.VariableDef(name, modifiers, varType, parseQuote());
         }
         if (definitionNode == null) {
             throw onError.apply("Invalid syntax in define: " + peek().type());
@@ -113,7 +114,7 @@ public class Parser {
 
         String returnType = (peek().type() == TokenType.Syntactic.TYPE) ? advance().lexeme() : null;
 
-        return  new DefinitionNode.LambdaDef(modifiers, parameters, body, returnType);
+        return new DefinitionNode.LambdaDef(modifiers, parameters, body, returnType);
     }
 
     private List<DefinitionNode.ParamDef> parseParameters() {
@@ -168,7 +169,11 @@ public class Parser {
             case TokenType.Expression expression -> parseExactExpression(expression);
             case TokenType.Operation operation -> parseOperation(operation);
             case TokenType.Literal literal -> parseLiteral();
-            default ->  throw onError.apply("Unexpected syntax in expression: " + peek().type());
+            case TokenType.Syntactic.GRAVE -> parseQuote();
+            case TokenType.Lexical lexical
+                    when lexical == TokenType.Lexical.RIGHT_PAREN
+                    && previous().type() == TokenType.Lexical.LEFT_PAREN -> LiteralNode.NIL_LIST;
+            default -> throw onError.apply("Unexpected syntax in expression: " + peek().type());
 
         };
 
@@ -185,15 +190,30 @@ public class Parser {
 //            case FOR_I -> { }
 //            case FOR_EACH -> { }
             case WHILE -> parseWhile();
-//            case CONS -> { }
-//            case CAR -> { }
-//            case CAAR -> { }
-//            case CADR -> { }
-//            case CDR -> { }
-//            case CDDR -> { }
-//            case CDAR -> { }
+            case CONS -> parseCons();
+            case CAR -> new ExpressionNode.ListAccess("f", parsePair());
+            case CDR -> new ExpressionNode.ListAccess("r", parsePair());
+
             default -> throw onError.apply("Unsupported operation: " + peek().lexeme());
         };
+    }
+
+    private Node parsePair() {
+        Node pair = parseExpressionData();
+        if (peek().type() != TokenType.Lexical.RIGHT_PAREN) {
+            throw onError.apply("Invalid argument count");
+        }
+        return pair;
+    }
+
+    private Node parseCons() {
+        Node car = parseExpressionData();
+        Node cdr = parseExpressionData();
+
+        if (peek().type() != TokenType.Lexical.RIGHT_PAREN) {
+            throw onError.apply("Cons must only have 2 arguments");
+        }
+        return new ExpressionNode.ConsExpr(car, cdr);
     }
 
     private Node parseMultiExpr() {
@@ -283,6 +303,12 @@ public class Parser {
 
     }
 
+    private Node parseQuote() {
+        advance(); // Consume grave
+        Node node = parseExpressionData();
+        return new LiteralNode.QuoteLit(node);
+    }
+
     private Node parseLiteral() {
         Token token = advance();
         if (token.type() instanceof TokenType.Literal literal) {
@@ -327,7 +353,6 @@ public class Parser {
             return new ExpressionNode.FuncArg(arg, name);
         } else {
             Node arg = parseExpressionData();
-            System.out.println("arggg: " + arg);
             return new ExpressionNode.FuncArg(arg, null);
         }
     }
@@ -355,6 +380,7 @@ public class Parser {
     private Token advance() {
         // debug
         if (peek().type() == TokenType.Lexical.LEFT_PAREN || peek().type() == TokenType.Lexical.RIGHT_PAREN) {
+            printRemainingTokens();
             throw new RuntimeException("Parenthesis should only be advanced via consumeParen");
         }
         //
@@ -375,6 +401,7 @@ public class Parser {
     private Token consume(TokenType type, String error) {
         // DEBUG
         if (peek().type() == TokenType.Lexical.LEFT_PAREN || peek().type() == TokenType.Lexical.RIGHT_PAREN) {
+            printRemainingTokens();
             throw new RuntimeException("Parenthesis should only be advanced via consumeParen");
         }
         //

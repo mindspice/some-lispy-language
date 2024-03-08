@@ -107,6 +107,7 @@ public sealed interface TokenType {
         FLOAT(null),
         DOUBLE(null),
         IDENTIFIER(null),
+      //  QUOTED(null),
         NULL("null");
 
         public final String stringValue;
@@ -131,11 +132,8 @@ public sealed interface TokenType {
         WHILE("while"),
         CONS("cons"),
         CAR("car"),
-        CAAR("caar"),
-        CADR("cadr"),
         CDR("cdr"),
-        CDDR("cddr"),
-        CDAR("cdar");
+        LACC("lacc");
 
         public final String stringValue;
 
@@ -149,7 +147,7 @@ public sealed interface TokenType {
 
     enum Definition implements TokenType {
         DEFINE("define"),
-        FUNC("func"),
+        FUNC("defunc"),
         LAMBDA("lambda");;
         public final String stringValue;
 
