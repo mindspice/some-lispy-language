@@ -1,5 +1,6 @@
 package interpreter;
 
+import evaluation.InterOp;
 import evaluation.OperationEval;
 import interpreter.data.Binding;
 import language.types.data.Pair;
@@ -8,7 +9,9 @@ import parse.Parser;
 import parse.node.*;
 import parse.token.TokenType;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.function.Function;
 
 
@@ -20,10 +23,14 @@ public class Interpreter {
     public String eval(String input) {
         var t = System.nanoTime();
         var tokens = lexer.process(input);
-        tokens.forEach(tk -> System.out.print(tk.type() + ","));
+     //   tokens.forEach(tk -> System.out.print(tk.type() + ","));
         var ast = parser.process(tokens);
         System.out.println(ast);
-        evalProgram(ast);
+        try {
+            evalProgram(ast);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
         return "Eval Took: " + (System.nanoTime() - t);
     }
 
@@ -74,7 +81,21 @@ public class Interpreter {
             case ExpressionNode.PrintExpr printExpr -> evalPrintExpression(printExpr);
             case ExpressionNode.WhileLoopExpr whileLoopExpr -> evalWhileExpression(whileLoopExpr);
             case ExpressionNode.LiteralCall literalCall -> evalLiteralCall(literalCall);
+            case ExpressionNode.JavaFuncCall javaFuncCall -> evalJavaFuncCall(javaFuncCall);
+            case ExpressionNode.JavaLiteralCall javaLiteralCall -> null;
         };
+    }
+
+    Node evalJavaFuncCall(ExpressionNode.JavaFuncCall jFuncCall) {
+        Object[] args = new Object[jFuncCall.arguments().size()];
+        for (int i = 0; i < jFuncCall.arguments().size(); ++i) {
+            LiteralNode evaledArg = (LiteralNode) evalNode(jFuncCall.arguments().get(i).value());
+            args[i] = evaledArg.asObject();
+            System.out.println(args);
+            System.out.println(evaledArg.asObject().getClass());
+        }
+        System.out.println(InterOp.getClassInstance(jFuncCall.name(), args));
+        return new LiteralNode.ObjectLit(InterOp.getClassInstance(jFuncCall.name(), args));
     }
 
     Node evalPairList(ExpressionNode.PairListExpression listExpr) {
@@ -93,7 +114,8 @@ public class Interpreter {
     }
 
     Node evalListAccess(ExpressionNode.ListAccess listAccess) {
-        if (!(evalNode(listAccess.list()) instanceof LiteralNode.PairLit pair)) {
+        Node evaledNode = evalNode(listAccess.list());
+        if (!(evaledNode instanceof LiteralNode.PairLit pair)) {
             throw new IllegalStateException("Attempted list access of non-list object");
         }
 
@@ -114,11 +136,11 @@ public class Interpreter {
     }
 
     Node evalFunctionCall(ExpressionNode.FunctionCall functionCall) {
-        LiteralNode literal = env.getScope().getBinding(functionCall.name());
+        LiteralNode literal = env.lookupBinding(functionCall.name());
         if (literal instanceof LiteralNode.LambdaLit lambda) {
             try {
                 env.pushClosureScope(lambda.env());
-                functionCall.bindParameters(this, lambda.value(), env.getScope());
+                functionCall.bindParameters(this, lambda.value(), env);
                 return evalNode(lambda.value().body());
             } finally {
                 env.popScope();
@@ -130,7 +152,7 @@ public class Interpreter {
     }
 
     Node evalLiteralCall(ExpressionNode.LiteralCall literalCall) {
-        return env.getScope().getBinding(literalCall.name());
+        return env.lookupBinding(literalCall.name());
     }
 
     Node evalPrintExpression(ExpressionNode.PrintExpr printExpr) {
@@ -149,7 +171,7 @@ public class Interpreter {
     Node evalAssignment(ExpressionNode.AssignOp assignment) {
         LiteralNode evaledNode = (LiteralNode) evalNode(assignment.value());
         if (evaledNode instanceof LiteralNode literalNode) {
-            env.getScope().reassignBinding(assignment.name(), literalNode);
+            env.reassignBinding(assignment.name(), literalNode);
             return evaledNode;
         }
         throw new IllegalStateException("Invalid assignment, Expected lambda or literal found: " + evaledNode);
@@ -162,11 +184,11 @@ public class Interpreter {
                 // TODO: check that expression that evals to a lambda properly assigns
                 if (evaledNode instanceof LiteralNode result) {
                     if (containsModifier(varDef.modifiers(), TokenType.Modifier.DYNAMIC, TokenType.Modifier.DYNAMIC_ALL)) {
-                        env.getScope().createBinding(varDef.name(), Binding.ofDynamic(result));
+                        env.createBinding(varDef.name(), Binding.ofDynamic(result));
                     } else if (containsModifier(varDef.modifiers(), TokenType.Modifier.MUTABLE, TokenType.Modifier.MUTABLE_ALL)) {
-                        env.getScope().createBinding(varDef.name(), Binding.ofMutable(result));
+                        env.createBinding(varDef.name(), Binding.ofMutable(result));
                     } else {
-                        env.getScope().createBinding(varDef.name(), Binding.ofFinal(result));
+                        env.createBinding(varDef.name(), Binding.ofFinal(result));
                     }
                     yield evaledNode;
                 } else {
@@ -174,13 +196,13 @@ public class Interpreter {
                 }
             }
             case DefinitionNode.FunctionDef func -> {
-                LiteralNode.LambdaLit lambdaLit = new LiteralNode.LambdaLit(func.lambda(), env.getScope());
+                LiteralNode.LambdaLit lambdaLit = new LiteralNode.LambdaLit(func.lambda(), env.getCurrEnv());
                 if (containsModifier(func.lambda().modifiers(), TokenType.Modifier.DYNAMIC, TokenType.Modifier.DYNAMIC_ALL)) {
-                    env.getScope().createBinding(func.name(), Binding.ofDynamic(lambdaLit));
+                    env.createBinding(func.name(), Binding.ofDynamic(lambdaLit));
                 } else if (containsModifier(func.lambda().modifiers(), TokenType.Modifier.MUTABLE, TokenType.Modifier.MUTABLE_ALL)) {
-                    env.getScope().createBinding(func.name(), Binding.ofMutable(lambdaLit));
+                    env.createBinding(func.name(), Binding.ofMutable(lambdaLit));
                 } else {
-                    env.getScope().createBinding(func.name(), Binding.ofFinal(lambdaLit));
+                    env.createBinding(func.name(), Binding.ofFinal(lambdaLit));
                 }
                 yield func.lambda();
             }

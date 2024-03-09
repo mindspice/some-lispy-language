@@ -107,6 +107,7 @@ public sealed interface TokenType {
         FLOAT(null),
         DOUBLE(null),
         IDENTIFIER(null),
+        JAVA_IDENTIFIER(null),
       //  QUOTED(null),
         NULL("null");
 

@@ -247,11 +247,13 @@ public sealed interface LiteralNode extends Node, EvalResult {
         public String langType() { return "quote"; }
 
         public boolean isRefEqualTo(EvalResult other) {
-            if (other.resultType() != ResultType.QUOTE) {
-                return false;
-            } else {
-                return other.asObject() == value;
-            }
+            return other.asNode() == value;
+
+//            if (other.resultType() != ResultType.QUOTE) {
+//                return false;
+//            } else {
+//                return other.asObject() == value;
+//            }
         }
     }
 
@@ -431,7 +433,11 @@ public sealed interface LiteralNode extends Node, EvalResult {
 
         public String langType() { return "list"; }
 
-        public boolean isRefEqualTo(EvalResult other) { return this.equals(other); }
+        public boolean isRefEqualTo(EvalResult other) {
+            System.out.println(other.asObject());
+            System.out.println(this);
+            return other.asObject() == NIL_LIST;
+        }
     }
 
     record PairLit(Pair<?, ?> value) implements LiteralNode, EvalResult {

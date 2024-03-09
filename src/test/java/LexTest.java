@@ -79,23 +79,21 @@ public class LexTest {
     public void typeLexing() {
         var lex = "(define x ::int 10)";
         var tokens = new Lexer().process(lex);
-        tokens.forEach(t -> System.out.println(t.type() + " | " + t.literal()));
+        assertEquals(TokenType.Syntactic.TYPE, tokens.get(3).type());
+        assertEquals("int", tokens.get(3).literal());
     }
-//
-//    @Test
-//    public void testQuote() {
-//        var lex = "`testStringQUote";
-//        var tokens = new Lexer().process(lex);
-//        System.out.println(tokens);
-//        assertEquals(TokenType.Literal.QUOTED, tokens.get(0).type());
-//        assertEquals(lex.substring(1), tokens.get(0).literal());
-//
-//        lex = "`((nest)(list)(test))";
-//        tokens = new Lexer().process(lex);
-//        System.out.println(tokens);
-//        assertEquals(TokenType.Literal.QUOTED, tokens.get(0).type());
-//        assertEquals(lex.substring(1), tokens.get(0).literal());
-//
-//    }
 
+
+    @Test
+    public void javaIdLexing(){
+        var lex = ("(@java.util.ArrayList 1 2 3)");
+        var tokens = new Lexer().process(lex);
+
+        assertEquals(TokenType.Literal.JAVA_IDENTIFIER, tokens.get(1).type());
+        assertEquals("java.util.ArrayList", tokens.get(1).literal());
+        assertEquals(1, tokens.get(2).literal());
+        assertEquals(2, tokens.get(3).literal());
+        assertEquals(3, tokens.get(4).literal());
+
+    }
 }

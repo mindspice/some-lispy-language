@@ -8,22 +8,17 @@ import java.util.stream.Collectors;
 
 
 public interface Environment {
+
+    Environment getParent();
+
     LiteralNode createBinding(String name, Binding binding);
 
     boolean hasBinding(String name);
 
-    LiteralNode reassignBinding(String name, LiteralNode value);
-
-    Binding lookupBinding(String name);
-
-    LiteralNode getBinding(String name);
-
-    LiteralNode getBinding(String name, String expectedType);
-
-    Environment getParent();
+    Binding getBinding(String name);
 
     default String stringifyMap(Map<String, Binding> map) {
-        return map.entrySet().stream().map(e -> String.format("Symbol: %s, Value: %s", e.getKey(), e.getValue().value()))
+        return map.entrySet().stream().map(e -> String.format("Symbol: %s, Value: %s", e.getKey(), e.getValue().getClass()))
                 .collect(Collectors.joining("\n"));
     }
 }

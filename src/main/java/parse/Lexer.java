@@ -106,6 +106,7 @@ public class Lexer {
         switch (singleToken) { //TODO add comments
             case TokenType.Syntactic.AMPERSAND -> lexModifier();
             case TokenType.Lexical.QUOTE ->  lexString();
+            case TokenType.Syntactic.AT -> lexJavaIdentifier();
           //  case TokenType.Syntactic.GRAVE -> lexQuote();
             default -> addToken(singleToken);
         }
@@ -247,6 +248,15 @@ public class Lexer {
         if (skipLit) {
             advance();
         }
+    }
+
+    public boolean lexJavaIdentifier() {
+        while(!isDefEnd(peekOne())) {
+            advance();
+        }
+        String text = source.substring(startIndex + 1, currIndex); // Skip @ character
+        addToken(TokenType.Literal.JAVA_IDENTIFIER, text);
+        return true;
     }
 
     public boolean lexKeywordOrIdentifier() {

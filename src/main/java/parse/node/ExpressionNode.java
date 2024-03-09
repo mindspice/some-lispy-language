@@ -1,8 +1,8 @@
 package parse.node;
 
 import interpreter.Environment;
-import interpreter.ScopeEnv;
 import interpreter.Interpreter;
+import interpreter.ScopeContext;
 import interpreter.data.Binding;
 
 import java.util.List;
@@ -48,7 +48,7 @@ public sealed interface ExpressionNode extends Node {
 
     record FunctionCall(String name, List<FuncArg> arguments) implements ExpressionNode {
         // TODO FIXME this needs to be more streamlined and efficient
-        public Environment bindParameters(Interpreter interpreter, DefinitionNode.LambdaDef lambda, Environment env) {
+        public void bindParameters(Interpreter interpreter, DefinitionNode.LambdaDef lambda, ScopeContext env) {
             if (arguments.size() < lambda.minArity() || arguments.size() > lambda.maxArity()) {
                 throw new IllegalStateException(String.format("Argument count mismatch. Passed: %d, Min: %d, Max: %d",
                         arguments.size(), lambda.minArity(), lambda.maxArity())
@@ -58,6 +58,8 @@ public sealed interface ExpressionNode extends Node {
                 var arg = arguments.get(i);
                 var param = lambda.parameters().get(i);
                 var evaledArg = (LiteralNode) interpreter.evalNode(arg.value);
+
+
                 env.createBinding(
                         arg.isNamed() ? arg.name() : param.name(),
                         new Binding(evaledArg.langType(), evaledArg, param.dynamic(), param.mutable())
@@ -70,9 +72,14 @@ public sealed interface ExpressionNode extends Node {
                     throw new IllegalStateException("Required parameter needed for function call");
                 }
             }
-            return env;
         }
     }
+
+    record JavaFuncCall(String name, List<Accessor> accessors, List<FuncArg> arguments) implements ExpressionNode { }
+
+    record JavaLiteralCall(String name, List<Accessor> accessors) implements ExpressionNode { }
+
+    record Accessor(boolean isField, String name) { }
 
     record LiteralCall(String name) implements ExpressionNode { }
 

@@ -5,12 +5,8 @@ import parse.Parser;
 
 public class ParseTest {
 
-
-
-
     @Test
     void RandomTest() {
-
 
 //        String s = """
 //               (* 2 2)
@@ -20,4 +16,10 @@ public class ParseTest {
 //        System.out.println(parse);
 
     }
+
+    //@Test
+//    void JavaIdentifierParser() {
+//        var p = Parser.parseAccessors("object:.field:method");
+//        System.out.println(p);
+//    }
 }

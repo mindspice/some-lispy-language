@@ -1,5 +1,6 @@
 package parse;
 
+import language.types.data.Pair;
 import parse.node.*;
 import parse.token.Token;
 import parse.token.TokenType;
@@ -349,10 +350,62 @@ public class Parser {
                 case FLOAT -> new LiteralNode.FloatLit((Float) token.literal());
                 case DOUBLE -> new LiteralNode.DoubleLit((Double) token.literal());
                 case IDENTIFIER -> parseIdentifier(token.lexeme());
+                case JAVA_IDENTIFIER -> parseJavaIdentifier(token.literal().toString());
                 case NULL -> new LiteralNode.NullLit();
             };
         }
         throw (onError.apply("Expected literal value"));
+    }
+
+    private Pair<String, List<ExpressionNode.Accessor>> parseAccessors(String identifier) {
+        String name = null;
+        List<ExpressionNode.Accessor> accessors = new ArrayList<>(4);
+
+        char[] idAsChars = identifier.toCharArray();
+        int currIdx = 0;
+        boolean isField = false;
+        for (int i = 0; i < idAsChars.length; ++i) {
+            if (idAsChars[i] == ':') {
+                if (name == null) {
+                    name = identifier.substring(0, i);
+                } else {
+                    accessors.add(new ExpressionNode.Accessor(isField, identifier.substring(currIdx, i)));
+                    isField = false;
+                }
+
+                if (idAsChars.length + 1 > idAsChars.length && idAsChars[i + 1] == '.') {
+                    currIdx = i + 2;
+                    isField = true;
+                } else {
+                    currIdx = i + 1;
+                }
+            }
+        }
+        accessors.add(new ExpressionNode.Accessor(isField, identifier.substring(currIdx)));
+        return Pair.of(name, accessors);
+    }
+
+    private Node parseJavaIdentifier(String identifier) {
+        String name = null;
+        List<ExpressionNode.Accessor> accessors = null;
+
+        if (identifier.contains(":")) {
+            var splitId = parseAccessors(identifier);
+            name = splitId.car();
+            accessors = splitId.cdr();
+        } else {
+            name = identifier;
+        }
+
+        if (previousN(2).type() == TokenType.Lexical.LEFT_PAREN) {
+            List<ExpressionNode.FuncArg> args = new ArrayList<>(5);
+            while (peek().type() != TokenType.Lexical.RIGHT_PAREN) {
+                args.add(parseFuncArgument());
+            }
+            return new ExpressionNode.JavaFuncCall(name, accessors, args);
+        } else {
+            return new ExpressionNode.JavaLiteralCall(name, accessors);
+        }
     }
 
     private Node parseIdentifier(String identifier) {
