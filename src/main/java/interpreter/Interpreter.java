@@ -23,7 +23,7 @@ public class Interpreter {
     public String eval(String input) {
         var t = System.nanoTime();
         var tokens = lexer.process(input);
-     //   tokens.forEach(tk -> System.out.print(tk.type() + ","));
+        //   tokens.forEach(tk -> System.out.print(tk.type() + ","));
         var ast = parser.process(tokens);
         System.out.println(ast);
         try {
@@ -100,9 +100,9 @@ public class Interpreter {
 
     Node evalPairList(ExpressionNode.PairListExpression listExpr) {
         var list = listExpr.elements();
-        Pair<?, ?> head = Pair.of(list.getLast(), LiteralNode.NIL_LIST);
+        Pair<?, ?> head = Pair.of(evalNode(list.getLast()), LiteralNode.NIL_LIST);
         for (int i = list.size() - 2; i >= 0; --i) {
-            head = Pair.of(list.get(i), head);
+            head = Pair.of(evalNode(list.get(i)), head);
         }
         return new LiteralNode.PairLit(head);
     }
@@ -192,6 +192,8 @@ public class Interpreter {
                     }
                     yield evaledNode;
                 } else {
+                    System.out.println(varDef);
+                    System.out.println(evaledNode);
                     throw new IllegalStateException("Variable definition not instance of lambda or evaluate to a literal value");
                 }
             }
@@ -204,9 +206,9 @@ public class Interpreter {
                 } else {
                     env.createBinding(func.name(), Binding.ofFinal(lambdaLit));
                 }
-                yield func.lambda();
+                yield lambdaLit;
             }
-            case DefinitionNode.LambdaDef lambdaDef -> lambdaDef;
+            case DefinitionNode.LambdaDef lambdaDef -> new LiteralNode.LambdaLit(lambdaDef, env.getCurrEnv());
         };
     }
 

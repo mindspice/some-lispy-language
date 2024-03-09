@@ -173,7 +173,7 @@ public class Parser {
             };
             case TokenType.Expression expression -> parseExactExpression(expression);
             case TokenType.Operation operation -> parseOperation(operation);
-            case TokenType.Literal literal -> parseLiteral();
+            case TokenType.Literal __ -> parseLiteral();
             case TokenType.Syntactic.GRAVE -> parseQuote();
             case TokenType.Lexical lexical
                     when lexical == TokenType.Lexical.RIGHT_PAREN
