@@ -2,6 +2,7 @@ package interpreter;
 
 import evaluation.OperationEval;
 import interpreter.data.Binding;
+import language.types.data.Pair;
 import parse.Lexer;
 import parse.Parser;
 import parse.node.*;
@@ -43,7 +44,6 @@ public class Interpreter {
             case OperationNode operationNode -> evalOperationNode(operationNode);
             case LiteralNode literalNode -> literalNode;
             case Node.Program program -> throw new RuntimeException("Fatal: Nested Program node, should never happen");
-
         };
     }
 
@@ -69,11 +69,21 @@ public class Interpreter {
             case ExpressionNode.FunctionCall functionCall -> evalFunctionCall(functionCall);
             case ExpressionNode.ListAccess listAccess -> evalListAccess(listAccess);
             case ExpressionNode.IfExpr ifExpr -> evalIfExpr(ifExpr);
+            case ExpressionNode.PairListExpression pairListExpr -> evalPairList(pairListExpr);
             case ExpressionNode.MultiExpr multiExpr -> evalMultiExpression(multiExpr);
             case ExpressionNode.PrintExpr printExpr -> evalPrintExpression(printExpr);
             case ExpressionNode.WhileLoopExpr whileLoopExpr -> evalWhileExpression(whileLoopExpr);
             case ExpressionNode.LiteralCall literalCall -> evalLiteralCall(literalCall);
         };
+    }
+
+    Node evalPairList(ExpressionNode.PairListExpression listExpr) {
+        var list = listExpr.elements();
+        Pair<?, ?> head = Pair.of(list.getLast(), LiteralNode.NIL_LIST);
+        for (int i = list.size() - 2; i >= 0; --i) {
+            head = Pair.of(list.get(i), head);
+        }
+        return new LiteralNode.PairLit(head);
     }
 
     Node evalCons(ExpressionNode.ConsExpr consExpr) {
@@ -83,14 +93,24 @@ public class Interpreter {
     }
 
     Node evalListAccess(ExpressionNode.ListAccess listAccess) {
-        if (evalNode(listAccess.list()) instanceof LiteralNode.PairLit pair) {
-            Object value = listAccess.pattern().charAt(0) == 'f' ? pair.value().car() : pair.value().cdr();
-            for (int i = 1; i < listAccess.pattern().length(); ++i) {
-                value = listAccess.pattern().charAt(i) == 'f' ? pair.value().car() : pair.value().cdr();
-            }
-            return (LiteralNode) value;
+        if (!(evalNode(listAccess.list()) instanceof LiteralNode.PairLit pair)) {
+            throw new IllegalStateException("Attempted list access of non-list object");
         }
-        throw new IllegalStateException("Attempted to access non-existent list value");
+
+        String pattern = listAccess.indexExpr() == null
+                         ? listAccess.pattern()
+                         : "f" + "r".repeat(((LiteralNode) evalNode(listAccess.indexExpr())).asInt());
+
+        Object value = pattern.charAt(pattern.length() - 1) == 'f' ? pair.value().car() : pair.value().cdr();
+        for (int i = pattern.length() - 2; i >= 0; --i) {
+            if (value instanceof Pair<?, ?> currPair) {
+                value = pattern.charAt(i) == 'f' ? currPair.car() : currPair.cdr();
+            } else {
+                throw new IllegalStateException("Invalid access pattern");
+            }
+        }
+        if (value instanceof Pair<?, ?> p) { return new LiteralNode.PairLit(p); }
+        return (LiteralNode) value;
     }
 
     Node evalFunctionCall(ExpressionNode.FunctionCall functionCall) {
@@ -170,14 +190,11 @@ public class Interpreter {
 
     Node evalWhileExpression(ExpressionNode.WhileLoopExpr whileLoop) {
         Node evaledNode = evalNode(whileLoop.condition());
-
         if (evaledNode instanceof EvalResult e) {
             if (!whileLoop.isDo() && !e.asBoolean()) { return LiteralNode.FALSE; }
         } else {
             throw new IllegalStateException("Loop condition invalid, not a boolean expression");
         }
-
-
         do {
             evaledNode = evalNode(whileLoop.body());
         } while (((EvalResult) evalNode(whileLoop.condition())).asBoolean());

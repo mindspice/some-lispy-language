@@ -34,7 +34,17 @@ public sealed interface ExpressionNode extends Node {
 
     record ConsExpr(Node car, Node cdr) implements ExpressionNode { }
 
-    record ListAccess(String pattern, Node list) implements ExpressionNode { }
+    record PairListExpression(List<Node> elements) implements ExpressionNode { }
+
+    record ListAccess(Node indexExpr, String pattern, Node list) implements ExpressionNode {
+        public static ListAccess ofPattern(String pattern, Node list) {
+            return new ListAccess(null, pattern, list);
+        }
+
+        public static ListAccess ofIndex(Node indexExpr, Node list) {
+            return new ListAccess(indexExpr, null, list);
+        }
+    }
 
     record FunctionCall(String name, List<FuncArg> arguments) implements ExpressionNode {
         // TODO FIXME this needs to be more streamlined and efficient

@@ -133,6 +133,7 @@ public sealed interface TokenType {
         CONS("cons"),
         CAR("car"),
         CDR("cdr"),
+        LIST("list"),
         LACC("lacc");
 
         public final String stringValue;

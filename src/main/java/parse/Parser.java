@@ -107,10 +107,15 @@ public class Parser {
 
         List<DefinitionNode.ParamDef> parameters = parseParameters();
 
+        Node body = null;
         // Consume opening and closing parens for implicit multi statements
-        consumeLParen("");
-        Node body = parseMultiExpr();
-        consumeRParen("");
+        if (peek().type() == TokenType.Lexical.LEFT_PAREN) {
+            consumeLParen("");
+            body = parseMultiExpr();
+            consumeRParen("");
+        } else {
+            body = parseLiteral();
+        }
 
         String returnType = (peek().type() == TokenType.Syntactic.TYPE) ? advance().lexeme() : null;
 
@@ -187,15 +192,39 @@ public class Parser {
             case COND -> parseCond();
             case BEGIN -> parseMultiExpr();
             case PRINT -> parsePrint();
+            case LIST -> parsePairList();
+            case LACC -> parseListAccess();
 //            case FOR_I -> { }
 //            case FOR_EACH -> { }
             case WHILE -> parseWhile();
             case CONS -> parseCons();
-            case CAR -> new ExpressionNode.ListAccess("f", parsePair());
-            case CDR -> new ExpressionNode.ListAccess("r", parsePair());
+            case CAR -> ExpressionNode.ListAccess.ofPattern("f", parsePair());
+            case CDR -> ExpressionNode.ListAccess.ofPattern("r", parsePair());
 
             default -> throw onError.apply("Unsupported operation: " + peek().lexeme());
         };
+    }
+
+    private Node parseListAccess() {
+        if (peek().type() == TokenType.Syntactic.GRAVE) {
+            advance(); // Consume grave
+            String pattern = advance().literal().toString();
+            Node list = parsePair();
+            return ExpressionNode.ListAccess.ofPattern(pattern, list);
+        } else {
+            Node indexExpr = parseExpressionData();
+            Node list = parsePair();
+            return ExpressionNode.ListAccess.ofIndex(indexExpr, list);
+        }
+    }
+
+    private Node parsePairList() {
+        List<Node> elements = new ArrayList<>(10);
+        while (peek().type() != TokenType.Lexical.RIGHT_PAREN) {
+            elements.add(parseExpressionData());
+        }
+        if (elements.isEmpty()) { return LiteralNode.NIL_LIST; }
+        return new ExpressionNode.PairListExpression(elements);
     }
 
     private Node parsePair() {
