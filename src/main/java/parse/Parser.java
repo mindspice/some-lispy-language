@@ -43,12 +43,47 @@ public class Parser {
         Node expression = null;
         consumeLParen("Expected start of s-expression: " + peek().type());
         expression = parseExpressionData();
+        if (peek().type() == TokenType.Syntactic.COLON) {
+            expression = parseObjectCall(expression);
+        }
         consumeRParen("Expected closing parenthesis of expression, found: " + peek().type());
 
         if (expression == null) {
             return LiteralNode.NIL_LIST;
         }
         return expression;
+    }
+
+    private Node parseObjectCall(Node objectExpr) {
+        consume(TokenType.Syntactic.COLON, "Expected colon, found: " + peek().type()); // Consume colon
+        boolean isField = false;
+        if (peekN(2).type() == TokenType.Syntactic.DOT) {
+            isField = true;
+            advance(); // Consume dot
+        }
+        Token idToken = consume(TokenType.Literal.IDENTIFIER, "Expected Identifier, Found: " + peek().type());
+        String identifier = idToken.literal().toString();
+
+        String name = null;
+        List<ExpressionNode.Accessor> accessors = null;
+
+        if (identifier.contains(":")) {
+            var splitId = parseAccessors(identifier);
+            name = splitId.car();
+            accessors = splitId.cdr();
+        } else {
+            name = identifier;
+        }
+
+        List<ExpressionNode.FuncArg> args = new ArrayList<>(5);
+
+        while (peek().type() != TokenType.Lexical.RIGHT_PAREN) {
+            ExpressionNode.FuncArg funcArg = parseFuncArgument();
+            args.add(funcArg);
+        }
+
+        ExpressionNode.FunctionCall funcCall = new ExpressionNode.FunctionCall(name, accessors, args);
+        return new ExpressionNode.OnObjectCall(objectExpr, funcCall, isField);
     }
 
     private Node parseFunc() {
@@ -404,7 +439,7 @@ public class Parser {
             }
             return new ExpressionNode.JavaFuncCall(name, accessors, args);
         } else {
-            return new ExpressionNode.JavaLiteralCall(name, accessors);
+            throw onError.apply("@<java> calls must occur inside an expression");
         }
     }
 

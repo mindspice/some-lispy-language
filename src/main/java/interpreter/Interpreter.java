@@ -33,7 +33,7 @@ public class Interpreter {
         } catch (Exception e) {
             e.printStackTrace();
         }
-        return "Eval Took | Total: " + (System.nanoTime() - t) +  ", Proc: " + (System.nanoTime() - t2);
+        return "Eval Took | Total: " + (System.nanoTime() - t) + ", Proc: " + (System.nanoTime() - t2);
     }
 
     void evalProgram(Node.Program program) {
@@ -84,7 +84,7 @@ public class Interpreter {
             case ExpressionNode.WhileLoopExpr whileLoopExpr -> evalWhileExpression(whileLoopExpr);
             case ExpressionNode.LiteralCall literalCall -> evalLiteralCall(literalCall);
             case ExpressionNode.JavaFuncCall javaFuncCall -> evalJavaFuncCall(javaFuncCall);
-            case ExpressionNode.JavaLiteralCall javaLiteralCall -> null;
+            case ExpressionNode.OnObjectCall onObjectCall -> evalObjectCall(onObjectCall);
         };
     }
 
@@ -112,7 +112,66 @@ public class Interpreter {
                 object = InterOp.invokeMethod(handle, object, args);
             }
         }
-        return  LiteralNode.getLiteralOfObject(object);
+        return LiteralNode.getLiteralOfObject(object);
+    }
+
+    Node evalObjectCall(ExpressionNode.OnObjectCall objectCall) {
+        LiteralNode literal = (LiteralNode) evalNode(objectCall.exprObj());
+        ExpressionNode.FunctionCall funcCall = objectCall.callExpr();
+
+        if (literal instanceof LiteralNode.ObjectLit || literal instanceof LiteralNode.AListLit<?>) {
+            Object[] evaledArgs = new Object[funcCall.arguments().size()];
+            for (int i = 0; i < funcCall.arguments().size(); ++i) {
+                EvalResult evalResult = (EvalResult) evalNode(funcCall.arguments().get(i).value());
+                evaledArgs[i] = evalResult.asObject();
+            }
+
+            Object object = literal.asObject();
+            Class<?> clazz = literal.classType();
+            boolean haveAccessors = funcCall.accessors() != null && !funcCall.accessors().isEmpty();
+
+            if (objectCall.isField()) {
+                VarHandle handle = InterOp.getField(clazz, funcCall.name(), clazz, false);
+                object = InterOp.getFieldData(handle, object);
+                clazz = object.getClass();
+            } else {
+                MethodHandle handle = InterOp.getMethod(
+                        clazz,
+                        funcCall.name(),
+                        null,
+                        haveAccessors ? new Object[0] : evaledArgs,
+                        false
+                );
+                object = InterOp.invokeMethod(handle, object, haveAccessors ? new Object[0] : evaledArgs);
+                clazz = object.getClass();
+            }
+
+            if (haveAccessors) {
+                List<ExpressionNode.Accessor> accessors = funcCall.accessors();
+                for (int i = 0; i < accessors.size(); ++i) {
+                    var acc = accessors.get(i);
+                    if (acc.isField()) {
+                        VarHandle handle = InterOp.getField(clazz, acc.name(), null, false);
+                        object = InterOp.getFieldData(handle, null);
+                        clazz = object.getClass();
+                    } else {
+                        MethodHandle handle = InterOp.getMethod(
+                                clazz,
+                                acc.name(),
+                                null,
+                                i == accessors.size() - 1 ? evaledArgs : new Object[0],
+                                false
+                        );
+                        object = InterOp.invokeMethod(handle, object, evaledArgs);
+                        clazz = object.getClass();
+                    }
+                }
+
+            }
+
+            return LiteralNode.getLiteralOfObject(object);
+        }
+        throw new IllegalStateException("Invalid call on Object");
     }
 
     Node evalPairList(ExpressionNode.PairListExpression listExpr) {
@@ -164,7 +223,7 @@ public class Interpreter {
                 env.popScope();
             }
         }
-        if (literal instanceof LiteralNode.ObjectLit ||  literal instanceof LiteralNode.AListLit<?> ) {
+        if (literal instanceof LiteralNode.ObjectLit || literal instanceof LiteralNode.AListLit<?>) {
             if (functionCall.accessors() == null) {
                 throw new IllegalStateException("Attempted to call method with no method name");
             }
@@ -180,7 +239,7 @@ public class Interpreter {
                     evaledArgs,
                     false);
             Object result = InterOp.invokeMethod(method, literal.asObject(), evaledArgs);
-            return new LiteralNode.ObjectLit(result);
+            return LiteralNode.getLiteralOfObject(result);
         }
         throw new IllegalStateException(
                 String.format("Attempted to call non lambda bound symbol %s as function", functionCall.name())

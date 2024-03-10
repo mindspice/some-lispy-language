@@ -58,7 +58,6 @@ public sealed interface ExpressionNode extends Node {
                 var param = lambda.parameters().get(i);
                 var evaledArg = (LiteralNode) interpreter.evalNode(arg.value);
 
-
                 env.createBinding(
                         arg.isNamed() ? arg.name() : param.name(),
                         new Binding(evaledArg.classType(), evaledArg, param.dynamic(), param.mutable())
@@ -76,7 +75,9 @@ public sealed interface ExpressionNode extends Node {
 
     record JavaFuncCall(String name, List<Accessor> accessors, List<FuncArg> arguments) implements ExpressionNode { }
 
-    record JavaLiteralCall(String name, List<Accessor> accessors) implements ExpressionNode { }
+   // record JavaLiteralCall(String name, List<Accessor> accessors) implements ExpressionNode { }
+
+    record OnObjectCall(Node exprObj, FunctionCall callExpr, boolean isField) implements ExpressionNode { }
 
     record Accessor(boolean isField, String name) { }
 

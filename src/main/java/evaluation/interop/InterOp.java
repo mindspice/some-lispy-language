@@ -64,7 +64,6 @@ public class InterOp {
     }
 
     public static Object getFieldData(VarHandle handle, Object instance) {
-        System.out.println("Instance:" + instance);
         if (instance == null) { return handle.get(); }
 
         return handle.get();
@@ -78,7 +77,7 @@ public class InterOp {
 
         Object[] finalArgs = null;
         if (instance != null) {
-            finalArgs =   new Object[arguments.length + 1];
+            finalArgs = new Object[arguments.length + 1];
             finalArgs[0] = instance;
             for (int i = 0; i < arguments.length; ++i) {
                 finalArgs[i + 1] = arguments[i];
@@ -86,7 +85,6 @@ public class InterOp {
         } else {
             finalArgs = arguments;
         }
-
 
         try {
             return handle.invokeWithArguments(finalArgs);
@@ -173,7 +171,6 @@ public class InterOp {
 
     public static MethodHandle getDirectMethodHandle(Class<?> clazz, String methodName, MethodType methodType, boolean isStatic) {
         try {
-            System.out.println(methodName);
             return isStatic
                    ? lookup.findStatic(clazz, methodName, methodType)
                    : lookup.findVirtual(clazz, methodName, methodType);
@@ -190,19 +187,16 @@ public class InterOp {
             Method method = methods[i];
             Class<?>[] methodParams = method.getParameterTypes();
             if (method.getName().equals(methodName)) {
-                System.out.println("Match");
-                System.out.println(Arrays.toString(method.getParameterTypes()));
+
             }
             if (!method.getName().equals(methodName)) { continue; }
 
             if (methodParams.length != paramTypes.length) {
-                System.out.println("Failed Length");
                 continue;
             }
 
             for (int j = 0; j < methodParams.length; ++j) {
                 if (!isCompatibleParameter(methodParams[j], paramTypes[j])) {
-                    System.out.println("Failed match");
                     break next;
                 }
             }
@@ -246,7 +240,6 @@ public class InterOp {
             }
             throw new IllegalStateException("No suitable constructor found for class: " + className + ", args:" + args);
         } catch (Exception e) {
-            System.out.println(e.getMessage());
             e.printStackTrace();
         } catch (Throwable e) {
             throw new RuntimeException(e);
