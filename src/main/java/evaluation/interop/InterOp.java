@@ -21,12 +21,6 @@ public class InterOp {
     private static final Map<Class<?>, ClassData> classMap = new HashMap<>(20);
     private static MethodHandles.Lookup lookup = MethodHandles.lookup();
 
-//    private static ClassData putClassData(String className, Class<?> clazz) {
-//        ClassData data = ClassData.ofClass(clazz);
-//        classNameMap.put(className, data);
-//        classMap.put(clazz, data);
-//        return data;
-//    }
 
     private static ClassData getClassData(String className) {
         ClassData data = classNameMap.get(className);
@@ -97,21 +91,23 @@ public class InterOp {
         return classData.classRef();
     }
 
-    public static VarHandle getField(String className, String fieldName, Class<?> type) {
-        return getField(getClassData(className), fieldName, type);
+    public static VarHandle getField(String className, String fieldName, Class<?> type, boolean isStatic) {
+        return getField(getClassData(className), fieldName, type, isStatic);
     }
 
-    public static VarHandle getField(Class<?> clazz, String fieldName, Class<?> type) {
-        return getField(getClassData(clazz), fieldName, type);
+    public static VarHandle getField(Class<?> clazz, String fieldName, Class<?> type, boolean isStatic) {
+        return getField(getClassData(clazz), fieldName, type, isStatic);
     }
 
-    public static VarHandle getField(ClassData classData, String fieldName, Class<?> type) {
+    public static VarHandle getField(ClassData classData, String fieldName, Class<?> type, boolean isStatic) {
         VarHandle handle = classData.getField(fieldName);
         if (handle != null) { return handle; }
 
         if (type != null) {
             try {
-                handle = lookup.findVarHandle(classData.classRef(), fieldName, type);
+                handle = isStatic
+                         ? lookup.findStaticVarHandle(classData.classRef(), fieldName, type)
+                         : lookup.findVarHandle(classData.classRef(), fieldName, type);
                 classData.addField(fieldName, handle);
                 return handle;
             } catch (NoSuchFieldException | IllegalAccessException ignored) { }
@@ -129,15 +125,19 @@ public class InterOp {
         }
     }
 
-    public static MethodHandle getMethod(Class<?> clazz, String methodName, Class<?> rtnType, List<EvalResult> args) {
-        return getMethod(getClassData(clazz), methodName, rtnType, args);
+    public static MethodHandle getMethod(Class<?> clazz, String methodName, Class<?> rtnType, List<EvalResult> args, boolean isStatic) {
+        return getMethod(getClassData(clazz), methodName, rtnType, args, isStatic);
     }
 
-    public static MethodHandle getMethod(String className, String methodName, Class<?> rtnType, List<EvalResult> args) {
-        return getMethod(getClassData(className), methodName, rtnType, args);
+    public static MethodHandle getMethod(String className, String methodName, Class<?> rtnType, List<EvalResult> args, boolean isStatic) {
+        return getMethod(getClassData(className), methodName, rtnType, args, isStatic);
     }
 
-    public static MethodHandle getMethod(ClassData classData, String methodName, Class<?> rtnType, List<EvalResult> args) {
+    public static MethodHandle getMethod(ClassData classData,
+            String methodName,
+            Class<?> rtnType,
+            List<EvalResult> args,
+            boolean isStatic) {
         List<Class<?>> paramTypes = new ArrayList<>(args.size());
         for (int i = 0; i < args.size(); ++i) {
             paramTypes.set(i, getLookupClass(args.get(i)));
@@ -149,7 +149,7 @@ public class InterOp {
 
         MethodHandle handle = null;
         if (rtnType != null) {
-            handle = getDirectMethodHandle(classData.classRef(), methodName, methodTypes);
+            handle = getDirectMethodHandle(classData.classRef(), methodName, methodTypes, isStatic);
             if (handle != null) {
                 classData.addMethod(methodName, handle);
                 return handle;
@@ -164,9 +164,11 @@ public class InterOp {
         throw new IllegalStateException("Failed to find method: " + methodName + " in class: " + classData.classRef().getSimpleName());
     }
 
-    public static MethodHandle getDirectMethodHandle(Class<?> clazz, String methodName, MethodType methodType) {
+    public static MethodHandle getDirectMethodHandle(Class<?> clazz, String methodName, MethodType methodType, boolean isStatic) {
         try {
-            return lookup.findVirtual(clazz, methodName, methodType);
+            return isStatic
+                   ? lookup.findStatic(clazz, methodName, methodType)
+                   : lookup.findVirtual(clazz, methodName, methodType);
         } catch (NoSuchMethodException | IllegalAccessException e) {
             return null;
         }
