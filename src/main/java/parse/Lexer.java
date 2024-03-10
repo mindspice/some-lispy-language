@@ -260,7 +260,7 @@ public class Lexer {
     }
 
     public boolean lexKeywordOrIdentifier() {
-        while (isAlphaNumeric(peekOne())) {
+        while(!isDefEnd(peekOne()) && haveNext()) {
             advance();
         }
 

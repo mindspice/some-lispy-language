@@ -290,15 +290,30 @@ public sealed interface LiteralNode extends Node, EvalResult {
 
     record ObjectLit(Object value) implements LiteralNode, EvalResult {
 
-        public int asInt() { return 1; }
+        public int asInt() {
+            if (value instanceof Number num) { return num.intValue(); }
+            return 1;
+        }
 
-        public long asLong() { return 1; }
+        public long asLong() {
+            if (value instanceof Number num) { return num.longValue(); }
+            return 1;
+        }
 
-        public float asFloat() { return 1; }
+        public float asFloat() {
+            if (value instanceof Number num) { return num.floatValue(); }
+            return 1;
+        }
 
-        public double asDouble() { return 1; }
+        public double asDouble() {
+            if (value instanceof Number num) { return num.doubleValue(); }
+            return 1;
+        }
 
-        public boolean asBoolean() { return value != null; }
+        public boolean asBoolean() {
+            if (value instanceof Boolean bool) { return bool; }
+            return value != null;
+        }
 
         public String asString() { return toString(); }
 
@@ -526,6 +541,21 @@ public sealed interface LiteralNode extends Node, EvalResult {
         public boolean isRefEqualTo(EvalResult other) {
             return other.asObject() == value;
         }
+    }
+
+    public static LiteralNode getLiteralOfObject(Object o) {
+        if (o instanceof Number num) {
+            if (num instanceof Integer) { return new IntLit(num.intValue()); }
+            if (num instanceof Double) { return new DoubleLit(num.doubleValue()); }
+            if (num instanceof Long) { return new LongLit(num.longValue()); }
+            if (num instanceof Float) { return new FloatLit(num.floatValue()); }
+        }
+
+        if (o instanceof List<?> list) {
+            return new AListLit<>(list);
+        }
+
+        return new ObjectLit(o);
     }
 
 }

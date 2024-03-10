@@ -21,17 +21,16 @@ public class InterOp {
     private static final Map<Class<?>, ClassData> classMap = new HashMap<>(20);
     private static MethodHandles.Lookup lookup = MethodHandles.lookup();
 
-
     private static ClassData getClassData(String className) {
         ClassData data = classNameMap.get(className);
         if (data == null) {
             try {
-                Class<?> clazz = Class.forName(className);
+                Class<?> clazz = lookup.findClass(className);
                 data = ClassData.ofClass(clazz);
                 classNameMap.put(className, data);
                 classMap.put(clazz, data);
                 return data;
-            } catch (ClassNotFoundException e) {
+            } catch (ClassNotFoundException | IllegalAccessException e) {
                 throw new IllegalStateException("Failed to find class: " + className);
             }
         }
@@ -65,24 +64,35 @@ public class InterOp {
     }
 
     public static Object getFieldData(VarHandle handle, Object instance) {
-        return handle.get(instance);
+        System.out.println("Instance:" + instance);
+        if (instance == null) { return handle.get(); }
+
+        return handle.get();
     }
 
     public static void setFieldData(VarHandle handle, Object instance, Object data) {
         handle.set(instance, data);
     }
 
-    public Object invokeMethod(MethodHandle handle, Object instance, List<EvalResult> arguments) {
-        Object[] finalArgs = new Object[arguments.size() + 1];
-        finalArgs[0] = instance;
+    public static Object invokeMethod(MethodHandle handle, Object instance, Object[] arguments) {
 
-        for (int i = 0; i < arguments.size(); ++i) {
-            finalArgs[i + 1] = arguments.get(i).asObject();
+        Object[] finalArgs = null;
+        if (instance != null) {
+            finalArgs =   new Object[arguments.length + 1];
+            finalArgs[0] = instance;
+            for (int i = 0; i < arguments.length; ++i) {
+                finalArgs[i + 1] = arguments[i];
+            }
+        } else {
+            finalArgs = arguments;
         }
+
+
         try {
-            return handle.invoke(finalArgs);
+            return handle.invokeWithArguments(finalArgs);
         } catch (Throwable e) {
-            throw new IllegalStateException("Method Invocation: " + handle.toString() + " threw:  " + e.getMessage());
+            e.printStackTrace();
+            throw new IllegalStateException("Method Invocation: " + handle.toString() + " threw: " + e.getMessage());
         }
     }
 
@@ -125,24 +135,20 @@ public class InterOp {
         }
     }
 
-    public static MethodHandle getMethod(Class<?> clazz, String methodName, Class<?> rtnType, List<EvalResult> args, boolean isStatic) {
+    public static MethodHandle getMethod(Class<?> clazz, String methodName, Class<?> rtnType, Object[] args, boolean isStatic) {
         return getMethod(getClassData(clazz), methodName, rtnType, args, isStatic);
     }
 
-    public static MethodHandle getMethod(String className, String methodName, Class<?> rtnType, List<EvalResult> args, boolean isStatic) {
+    public static MethodHandle getMethod(String className, String methodName, Class<?> rtnType, Object[] args, boolean isStatic) {
         return getMethod(getClassData(className), methodName, rtnType, args, isStatic);
     }
 
-    public static MethodHandle getMethod(ClassData classData,
-            String methodName,
-            Class<?> rtnType,
-            List<EvalResult> args,
-            boolean isStatic) {
-        List<Class<?>> paramTypes = new ArrayList<>(args.size());
-        for (int i = 0; i < args.size(); ++i) {
-            paramTypes.set(i, getLookupClass(args.get(i)));
+    public static MethodHandle getMethod(ClassData classData, String methodName, Class<?> rtnType, Object[] args, boolean isStatic) {
+        Class<?>[] paramTypes = new Class<?>[args.length];
+        for (int i = 0; i < args.length; ++i) {
+            paramTypes[i] = getLookupClass(args[i]);
         }
-        MethodType methodTypes = MethodType.methodType(rtnType, paramTypes);
+        MethodType methodTypes = MethodType.methodType(rtnType == null ? Object.class : rtnType, paramTypes);
 
         MethodData data = classData.getMethod(methodName, rtnType, paramTypes);
         if (data != null) { return data.handle(); }
@@ -161,11 +167,13 @@ public class InterOp {
             classData.addMethod(methodName, handle);
             return handle;
         }
+
         throw new IllegalStateException("Failed to find method: " + methodName + " in class: " + classData.classRef().getSimpleName());
     }
 
     public static MethodHandle getDirectMethodHandle(Class<?> clazz, String methodName, MethodType methodType, boolean isStatic) {
         try {
+            System.out.println(methodName);
             return isStatic
                    ? lookup.findStatic(clazz, methodName, methodType)
                    : lookup.findVirtual(clazz, methodName, methodType);
@@ -177,17 +185,24 @@ public class InterOp {
     public static MethodHandle searchForMethodHandle(Class<?> clazz, String methodName, MethodType methodType) {
         Method[] methods = clazz.getMethods();
         Class<?>[] paramTypes = methodType.parameterArray();
-
         next:
         for (int i = 0; i < methods.length; ++i) {
             Method method = methods[i];
             Class<?>[] methodParams = method.getParameterTypes();
-            if (method.getParameterTypes().length != paramTypes.length) {
+            if (method.getName().equals(methodName)) {
+                System.out.println("Match");
+                System.out.println(Arrays.toString(method.getParameterTypes()));
+            }
+            if (!method.getName().equals(methodName)) { continue; }
+
+            if (methodParams.length != paramTypes.length) {
+                System.out.println("Failed Length");
                 continue;
             }
 
             for (int j = 0; j < methodParams.length; ++j) {
-                if (!methodParams[j].isAssignableFrom(paramTypes[i])) {
+                if (!isCompatibleParameter(methodParams[j], paramTypes[j])) {
+                    System.out.println("Failed match");
                     break next;
                 }
             }
@@ -211,8 +226,6 @@ public class InterOp {
 
                 boolean match = true;
                 for (int j = 0; j < paramTypes.length; j++) {
-                    System.out.println("ParamClass: " + paramTypes[j]);
-                    System.out.println("ArgClass: " + args[j].getClass());
                     if (!paramTypes[j].isInstance(args[j]) && !canAssignFrom(paramTypes[j], args[j])) {
                         match = false;
                         break;
@@ -221,30 +234,92 @@ public class InterOp {
 
                 if (match) {
                     try {
+//                        if (args.isEmpty()) {
+//                            return constructors[i].newInstance();
+//                        } else {
                         return constructors[i].newInstance(args);
+                        //  }
                     } catch (InstantiationException | InvocationTargetException | IllegalAccessException e) {
                         throw new IllegalStateException("Failed to initialize" + className + " Error: " + e.getMessage());
                     }
                 }
             }
-            throw new IllegalStateException("No suitable constructor found for class: " + className + ", args:" + Arrays.toString(args));
+            throw new IllegalStateException("No suitable constructor found for class: " + className + ", args:" + args);
         } catch (Exception e) {
             System.out.println(e.getMessage());
             e.printStackTrace();
+        } catch (Throwable e) {
+            throw new RuntimeException(e);
         }
         return null;
     }
 
-    private static Class<?> getLookupClass(EvalResult object) {
-        if (object.resultType() == ResultType.OBJECT) {
-            if (object.asObject() instanceof Collection<?> col) {
-                if (col instanceof List<?>) { return List.class; }
-                if (col instanceof Map<?, ?>) { return Map.class; }
-                if (col instanceof Set<?>) { return Set.class; }
-                if (col instanceof Queue<?>) { return Queue.class; }
-                return Collection.class;
-            }
+    private static Class<?> getLookupClass(Object object) {
+        if (object instanceof Collection<?> col) {
+            if (col instanceof List<?>) { return List.class; }
+            if (col instanceof Map<?, ?>) { return Map.class; }
+            if (col instanceof Set<?>) { return Set.class; }
+            if (col instanceof Queue<?>) { return Queue.class; }
+            return Collection.class;
         }
-        return object.classType();
+        return object.getClass();
+    }
+
+    private static boolean isCompatibleParameter(Class<?> mType, Class<?> pType) {
+        if (mType == pType) { return true; }
+        if (mType == Object.class) { return true; }
+        if (mType.isAssignableFrom(pType)) { return true; }
+
+        if (mType.isPrimitive()) {
+            if (mType == boolean.class) { return pType == Boolean.class; }
+            if (!Number.class.isAssignableFrom(pType)) { return false; }
+
+            if (mType == int.class) {
+                return pType == Integer.class || pType == Short.class
+                        || pType == Byte.class || pType == Character.class;
+            }
+            if (mType == double.class) {
+                return pType == Double.class || pType == Integer.class || pType == Long.class || pType == Float.class
+                        || pType == Short.class || pType == Byte.class || pType == Character.class;
+            }
+            if (mType == long.class) {
+                return pType == Long.class || pType == Integer.class || pType == Short.class
+                        || pType == Byte.class || pType == Character.class;
+            }
+            if (mType == float.class) {
+                return pType == Float.class || pType == Integer.class || pType == Long.class
+                        || pType == Short.class || pType == Byte.class || pType == Character.class;
+            }
+
+            if (mType == short.class) { return pType == Short.class || pType == Byte.class; }
+
+            if (mType == byte.class) { return pType == Byte.class; }
+
+            if (mType == char.class) { return pType == Character.class; }
+
+        }
+
+        if (Number.class.isAssignableFrom(mType)) {
+            if (!Number.class.isAssignableFrom(pType)) { return false; }
+
+            if (mType == Integer.class) {
+                return pType == Short.class || pType == Byte.class || pType == Character.class;
+            }
+            if (mType == Double.class) {
+                return pType == Integer.class || pType == Long.class || pType == Float.class
+                        || pType == Short.class || pType == Byte.class || pType == Character.class;
+            }
+            if (mType == Long.class) {
+                return pType == Integer.class || pType == Short.class || pType == Byte.class || pType == Character.class;
+            }
+            if (mType == Float.class) {
+                return pType == Integer.class || pType == Long.class || pType == Short.class
+                        || pType == Byte.class || pType == Character.class;
+            }
+
+            if (mType == Short.class) { return pType == Byte.class; }
+        }
+
+        return false;
     }
 }

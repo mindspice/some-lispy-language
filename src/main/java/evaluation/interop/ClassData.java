@@ -2,10 +2,7 @@ package evaluation.interop;
 
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.VarHandle;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 
 public record ClassData(Class<?> classRef, Map<String, List<MethodData>> methodHandles, Map<String, VarHandle> varHandles) {
@@ -16,15 +13,16 @@ public record ClassData(Class<?> classRef, Map<String, List<MethodData>> methodH
     // TODO uses some type of hashing and mapFlat with a more performant map implementation;
     public void addMethod(String name, MethodHandle handle) {
         var handles = methodHandles.computeIfAbsent(name, k -> new ArrayList<>(3));
+        Class<?>[] paramArray =  handle.type().parameterArray();
         MethodData data = new MethodData(
                 handle,
                 handle.type().returnType(),
-                handle.type().parameterArray()
+               paramArray.length > 0 ? Arrays.copyOfRange(paramArray, 1 , paramArray.length) : paramArray
         );
         handles.add(data);
     }
 
-    public MethodData getMethod(String name, Class<?> rtnType, List<Class<?>> params) {
+    public MethodData getMethod(String name, Class<?> rtnType, Class<?>[] params) {
         var methods = methodHandles.get(name);
         if (methods == null) { return null; }
 

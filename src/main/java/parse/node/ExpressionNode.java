@@ -45,7 +45,7 @@ public sealed interface ExpressionNode extends Node {
         }
     }
 
-    record FunctionCall(String name, List<FuncArg> arguments) implements ExpressionNode {
+    record FunctionCall(String name, List<Accessor> accessors, List<FuncArg> arguments) implements ExpressionNode {
         // TODO FIXME this needs to be more streamlined and efficient
         public void bindParameters(Interpreter interpreter, DefinitionNode.LambdaDef lambda, ScopeContext env) {
             if (arguments.size() < lambda.minArity() || arguments.size() > lambda.maxArity()) {

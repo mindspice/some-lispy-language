@@ -349,7 +349,7 @@ public class Parser {
                 case LONG -> new LiteralNode.LongLit((Long) token.literal());
                 case FLOAT -> new LiteralNode.FloatLit((Float) token.literal());
                 case DOUBLE -> new LiteralNode.DoubleLit((Double) token.literal());
-                case IDENTIFIER -> parseIdentifier(token.lexeme());
+                case IDENTIFIER -> parseIdentifier(token.literal().toString());
                 case JAVA_IDENTIFIER -> parseJavaIdentifier(token.literal().toString());
                 case NULL -> new LiteralNode.NullLit();
             };
@@ -409,6 +409,17 @@ public class Parser {
     }
 
     private Node parseIdentifier(String identifier) {
+        String name = null;
+        List<ExpressionNode.Accessor> accessors = null;
+
+        if (identifier.contains(":")) {
+            var splitId = parseAccessors(identifier);
+            name = splitId.car();
+            accessors = splitId.cdr();
+        } else {
+            name = identifier;
+        }
+
         if (previousN(2).type() == TokenType.Lexical.LEFT_PAREN) {
             List<ExpressionNode.FuncArg> args = new ArrayList<>(5);
             boolean atOpt = false;
@@ -420,9 +431,9 @@ public class Parser {
                 }
                 args.add(funcArg);
             }
-            return new ExpressionNode.FunctionCall(identifier, args);
+            return new ExpressionNode.FunctionCall(name, accessors, args);
         } else {
-            return new ExpressionNode.LiteralCall(identifier);
+            return new ExpressionNode.LiteralCall(name);
         }
     }
 

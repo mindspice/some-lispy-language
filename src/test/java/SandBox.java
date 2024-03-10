@@ -36,13 +36,6 @@ public class SandBox {
     }
 
 
-    public MethodHandle lookUpMethod(String name, Class<?> returnType, List<Class<?>> paramTypes) {
-        MethodType methodType = MethodType.methodType(returnType, paramTypes);
-
-        //
-
-
-    }
 
     private Class<?> getLookupClass(EvalResult object) {
         if (object.resultType() == ResultType.OBJECT) {

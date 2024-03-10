@@ -38,6 +38,7 @@ public class Repl {
                     String result = interpreter.eval(input);
                     System.out.println(result);
                 } catch (Exception e) {
+                    e.printStackTrace();
                     System.err.println("Error: " + e.getMessage());
                 }
             }

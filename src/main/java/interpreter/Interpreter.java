@@ -9,6 +9,9 @@ import parse.Parser;
 import parse.node.*;
 import parse.token.TokenType;
 
+import java.lang.invoke.MethodHandle;
+import java.lang.invoke.VarHandle;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Function;
 
@@ -21,15 +24,16 @@ public class Interpreter {
     public String eval(String input) {
         var t = System.nanoTime();
         var tokens = lexer.process(input);
-        //   tokens.forEach(tk -> System.out.print(tk.type() + ","));
+        tokens.forEach(tk -> System.out.print(tk.type() + ","));
         var ast = parser.process(tokens);
+        var t2 = System.nanoTime();
         System.out.println(ast);
         try {
             evalProgram(ast);
         } catch (Exception e) {
             e.printStackTrace();
         }
-        return "Eval Took: " + (System.nanoTime() - t);
+        return "Eval Took | Total: " + (System.nanoTime() - t) +  ", Proc: " + (System.nanoTime() - t2);
     }
 
     void evalProgram(Node.Program program) {
@@ -89,11 +93,26 @@ public class Interpreter {
         for (int i = 0; i < jFuncCall.arguments().size(); ++i) {
             LiteralNode evaledArg = (LiteralNode) evalNode(jFuncCall.arguments().get(i).value());
             args[i] = evaledArg.asObject();
-            System.out.println(args);
-            System.out.println(evaledArg.asObject().getClass());
         }
-        System.out.println(InterOp.getClassInstance(jFuncCall.name(), args));
-        return new LiteralNode.ObjectLit(InterOp.getClassInstance(jFuncCall.name(), args));
+
+        if (jFuncCall.accessors() == null) {
+            return LiteralNode.getLiteralOfObject(InterOp.getClassInstance(jFuncCall.name(), args));
+        }
+
+        List<ExpressionNode.Accessor> accessors = jFuncCall.accessors();
+        Object object = null;
+        Class<?> clazz = InterOp.getTypeClass(jFuncCall.name());
+        for (int i = 0; i < accessors.size(); ++i) {
+            var acc = accessors.get(i);
+            if (acc.isField()) {
+                VarHandle handle = InterOp.getField(clazz, acc.name(), null, true);
+                object = InterOp.getFieldData(handle, null);
+            } else {
+                MethodHandle handle = InterOp.getMethod(clazz, acc.name(), null, i == accessors.size() - 1 ? args : new Object[0], true);
+                object = InterOp.invokeMethod(handle, object, args);
+            }
+        }
+        return  LiteralNode.getLiteralOfObject(object);
     }
 
     Node evalPairList(ExpressionNode.PairListExpression listExpr) {
@@ -135,6 +154,7 @@ public class Interpreter {
 
     Node evalFunctionCall(ExpressionNode.FunctionCall functionCall) {
         LiteralNode literal = env.lookupBinding(functionCall.name());
+
         if (literal instanceof LiteralNode.LambdaLit lambda) {
             try {
                 env.pushClosureScope(lambda.env());
@@ -143,6 +163,24 @@ public class Interpreter {
             } finally {
                 env.popScope();
             }
+        }
+        if (literal instanceof LiteralNode.ObjectLit ||  literal instanceof LiteralNode.AListLit<?> ) {
+            if (functionCall.accessors() == null) {
+                throw new IllegalStateException("Attempted to call method with no method name");
+            }
+            Object[] evaledArgs = new Object[functionCall.arguments().size()];
+            for (int i = 0; i < functionCall.arguments().size(); ++i) {
+                EvalResult evalResult = (EvalResult) evalNode(functionCall.arguments().get(i).value());
+                evaledArgs[i] = evalResult.asObject();
+            }
+            var method = InterOp.getMethod(
+                    literal.classType(),
+                    functionCall.accessors().getFirst().name(),
+                    null,
+                    evaledArgs,
+                    false);
+            Object result = InterOp.invokeMethod(method, literal.asObject(), evaledArgs);
+            return new LiteralNode.ObjectLit(result);
         }
         throw new IllegalStateException(
                 String.format("Attempted to call non lambda bound symbol %s as function", functionCall.name())
