@@ -25,8 +25,7 @@ public interface EvalResult {
 
     ResultType resultType();
 
-    String langType();
-
+    Class<?> classType();
 
     boolean isRefEqualTo(EvalResult other);
 
@@ -49,7 +48,7 @@ public interface EvalResult {
 
         public ResultType resultType() { return ResultType.NODE; }
 
-        public String langType() { return value().getClass().getTypeName(); }
+        public Class<?> classType() { return Node.class; }
 
         public List<Node> asAList() { return List.of(value); }
 

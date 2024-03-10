@@ -1,6 +1,6 @@
 package interpreter;
 
-import evaluation.InterOp;
+import evaluation.interop.InterOp;
 import evaluation.OperationEval;
 import interpreter.data.Binding;
 import language.types.data.Pair;
@@ -9,9 +9,7 @@ import parse.Parser;
 import parse.node.*;
 import parse.token.TokenType;
 
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.function.Function;
 
 
@@ -192,8 +190,6 @@ public class Interpreter {
                     }
                     yield evaledNode;
                 } else {
-                    System.out.println(varDef);
-                    System.out.println(evaledNode);
                     throw new IllegalStateException("Variable definition not instance of lambda or evaluate to a literal value");
                 }
             }

@@ -42,7 +42,7 @@ public sealed interface LiteralNode extends Node, EvalResult {
 
         public ResultType resultType() { return ResultType.INT; }
 
-        public String langType() { return "int"; }
+        public Class<?> classType() { return int.class; }
 
         public boolean isRefEqualTo(EvalResult other) {
             if (other.resultType().subType != ResultType.SubResultType.NUMBER) {
@@ -84,7 +84,7 @@ public sealed interface LiteralNode extends Node, EvalResult {
 
         public ResultType resultType() { return ResultType.FLOAT; }
 
-        public String langType() { return "float"; }
+        public Class<?> classType() { return float.class; }
 
         public boolean isRefEqualTo(EvalResult other) {
             if (other.resultType().subType != ResultType.SubResultType.NUMBER) {
@@ -126,7 +126,7 @@ public sealed interface LiteralNode extends Node, EvalResult {
 
         public ResultType resultType() { return ResultType.LONG; }
 
-        public String langType() { return "long"; }
+        public Class<?> classType() { return long.class; }
 
         public boolean isRefEqualTo(EvalResult other) {
             if (other.resultType().subType != ResultType.SubResultType.NUMBER) {
@@ -167,7 +167,7 @@ public sealed interface LiteralNode extends Node, EvalResult {
 
         public ResultType resultType() { return ResultType.DOUBLE; }
 
-        public String langType() { return "double"; }
+        public Class<?> classType() { return double.class; }
 
         public boolean isRefEqualTo(EvalResult other) {
             if (other.resultType().subType != ResultType.SubResultType.NUMBER) {
@@ -209,7 +209,7 @@ public sealed interface LiteralNode extends Node, EvalResult {
 
         public ResultType resultType() { return ResultType.STRING; }
 
-        public String langType() { return "String"; }
+        public Class<?> classType() { return String.class; }
 
         public boolean isRefEqualTo(EvalResult other) {
             if (other.resultType().subType != ResultType.SubResultType.STRING) {
@@ -244,7 +244,7 @@ public sealed interface LiteralNode extends Node, EvalResult {
 
         public ResultType resultType() { return ResultType.QUOTE; }
 
-        public String langType() { return "quote"; }
+        public Class<?> classType() { return Node.class; }
 
         public boolean isRefEqualTo(EvalResult other) {
             return other.asNode() == value;
@@ -281,7 +281,7 @@ public sealed interface LiteralNode extends Node, EvalResult {
 
         public ResultType resultType() { return ResultType.BOOLEAN; }
 
-        public String langType() { return "boolean"; }
+        public Class<?> classType() { return boolean.class; }
 
         public boolean isRefEqualTo(EvalResult other) {
             return other.asBoolean() == value(); // FIXME do I really want to do this?
@@ -310,7 +310,7 @@ public sealed interface LiteralNode extends Node, EvalResult {
 
         public ResultType resultType() { return ResultType.OBJECT; }
 
-        public String langType() { return value.getClass().getTypeName(); }
+        public Class<?> classType() { return value.getClass(); }
 
         public boolean isRefEqualTo(EvalResult other) {
             return other.asObject() == value;
@@ -341,7 +341,7 @@ public sealed interface LiteralNode extends Node, EvalResult {
 
         public List<Object> asAList() { return List.of(); }
 
-        public String langType() { return "null"; }
+        public Class<?> classType() { return null; }
 
         public boolean isRefEqualTo(EvalResult other) {
             return other.asObject() == null;
@@ -372,7 +372,7 @@ public sealed interface LiteralNode extends Node, EvalResult {
 
         public List<Object> asAList() { return List.of(); }
 
-        public String langType() { return "void"; }
+        public Class<?> classType() { return void.class; }
 
         public boolean isRefEqualTo(EvalResult other) {
             return other.asObject() == this;
@@ -403,7 +403,7 @@ public sealed interface LiteralNode extends Node, EvalResult {
 
         public ResultType resultType() { return ResultType.ALIST; }
 
-        public String langType() { return "ArrayList"; }
+        public Class<?> classType() { return List.class; }
 
         public boolean isRefEqualTo(EvalResult other) {
             return other.asObject() == value;
@@ -431,7 +431,7 @@ public sealed interface LiteralNode extends Node, EvalResult {
 
         public ResultType resultType() { return ResultType.LIST; }
 
-        public String langType() { return "list"; }
+        public Class<?> classType() { return this.getClass(); }
 
         public boolean isRefEqualTo(EvalResult other) {
             System.out.println(other.asObject());
@@ -487,12 +487,10 @@ public sealed interface LiteralNode extends Node, EvalResult {
         }
 
         public ResultType resultType() {
-            return null;
+            return ResultType.OBJECT;
         }
 
-        public String langType() {
-            return null;
-        }
+        public Class<?> classType() { return Pair.class; }
 
         public boolean isRefEqualTo(EvalResult other) {
             return false;
@@ -523,7 +521,7 @@ public sealed interface LiteralNode extends Node, EvalResult {
 
         public ResultType resultType() { return ResultType.LAMBDA; }
 
-        public String langType() { return "lambda<" + value.returnType() + ">"; }
+        public Class<?> classType() { return this.getClass(); }
 
         public boolean isRefEqualTo(EvalResult other) {
             return other.asObject() == value;

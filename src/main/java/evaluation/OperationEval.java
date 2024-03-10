@@ -608,7 +608,6 @@ public class OperationEval {
         return new LiteralNode.BooleanLit(true);
     }
 
-
     /////////////
     // Helpers //
     /////////////

@@ -1,6 +1,5 @@
 package parse.node;
 
-import interpreter.Environment;
 import interpreter.Interpreter;
 import interpreter.ScopeContext;
 import interpreter.data.Binding;
@@ -62,7 +61,7 @@ public sealed interface ExpressionNode extends Node {
 
                 env.createBinding(
                         arg.isNamed() ? arg.name() : param.name(),
-                        new Binding(evaledArg.langType(), evaledArg, param.dynamic(), param.mutable())
+                        new Binding(evaledArg.classType(), evaledArg, param.dynamic(), param.mutable())
                 );
             }
             for (int i = 0; i < lambda.parameters().size(); ++i) {

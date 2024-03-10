@@ -1,20 +1,17 @@
 package interpreter.data;
 
-import parse.node.DefinitionNode;
-import parse.node.EvalResult;
-import parse.node.ExpressionNode;
 import parse.node.LiteralNode;
 
 import java.util.StringJoiner;
 
 
 public class Binding {
-    private String type;
+    private Class<?> type;
     private LiteralNode value;
     private final boolean dynamic;
     private final boolean mutable;
 
-    public Binding(String type, LiteralNode value, boolean dynamic, boolean mutable) {
+    public Binding(Class<?> type, LiteralNode value, boolean dynamic, boolean mutable) {
         this.type = type;
         this.value = value;
         this.dynamic = dynamic;
@@ -22,26 +19,26 @@ public class Binding {
     }
 
     public static Binding ofDynamic(LiteralNode value) {
-        return new Binding(value.langType(), value, true, true);
+        return new Binding(value.classType(), value, true, true);
     }
 
     public static Binding ofMutable(LiteralNode value) {
-        return new Binding(value.langType(), value, false, true);
+        return new Binding(value.classType(), value, false, true);
     }
 
     public static Binding ofFinal(LiteralNode value) {
-        return new Binding(value.langType(), value, false, false);
+        return new Binding(value.classType(), value, false, false);
     }
 
     public LiteralNode reAssign(LiteralNode value) {
         if (!mutable) { throw new IllegalStateException("Reassignment of final value"); }
-        if (!dynamic && !type.equals(value.langType())) { throw new IllegalStateException("Type mismatch"); }
-        this.type = value.langType();
+        if (!dynamic && !type.equals(value.classType())) { throw new IllegalStateException("Type mismatch"); }
+        this.type = value.classType();
         this.value = value;
         return value;
     }
 
-    public String type() {
+    public Class<?> type() {
         return type;
     }
 
